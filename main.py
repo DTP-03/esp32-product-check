@@ -4,6 +4,7 @@ import cv2
 import numpy as np
 import base64
 import json
+import os
 
 app = Flask(__name__)
 
@@ -63,4 +64,5 @@ if __name__ == "__main__":
     print(" Đang kết nối MQTT...")
     client.connect(MQTT_BROKER, 1883, 60)
     client.loop_start()
-    app.run(host="0.0.0.0", port=5000)
+    port = int(os.environ.get("PORT", 5000))  # Lấy cổng từ biến môi trường Railway
+    app.run(host="0.0.0.0", port=port)
