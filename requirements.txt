@@ -1,4 +1,5 @@
-opencv-python
-paho-mqtt
 flask
+opencv-python
 numpy
+paho-mqtt
+requests
