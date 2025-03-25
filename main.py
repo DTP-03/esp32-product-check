@@ -8,12 +8,10 @@ import json
 app = Flask(__name__)
 
 MQTT_BROKER = "esp32-product-check-production.up.railway.app"
-MQTT_TOPIC_SUB = "iot/product/result"   # Nhận kết quả xử lý từ server
-MQTT_TOPIC_PUB = "iot/product/image"    # Gửi ảnh từ ESP32-CAM lên server
-
+MQTT_TOPIC_SUB = "iot/product/result"
+MQTT_TOPIC_PUB = "iot/product/image"
 
 client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
-client.username_pw_set(DEVICE_TOKEN)
 
 def on_connect(client, userdata, flags, reason_code, properties=None):
     if reason_code == 0:
