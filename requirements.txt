@@ -1,5 +1,4 @@
 flask
-opencv-python
 numpy
-paho-mqtt
-requests
+opencv-python-headless
+gunicorn
