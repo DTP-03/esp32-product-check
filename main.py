@@ -7,10 +7,10 @@ import json
 
 app = Flask(__name__)
 
-MQTT_BROKER = "thingsboard.cloud"
-MQTT_TOPIC_SUB = "v1/devices/me/telemetry"
-MQTT_TOPIC_PUB = "v1/devices/me/attributes"
-DEVICE_TOKEN = "ssj4d8ew7gdudn9mokwb"
+MQTT_BROKER = "esp32-product-check-production.up.railway.app"
+MQTT_TOPIC_SUB = "iot/product/result"   # Nhận kết quả xử lý từ server
+MQTT_TOPIC_PUB = "iot/product/image"    # Gửi ảnh từ ESP32-CAM lên server
+
 
 client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
 client.username_pw_set(DEVICE_TOKEN)
