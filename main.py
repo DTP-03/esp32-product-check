@@ -8,7 +8,9 @@ import os
 
 app = Flask(__name__)
 
-MQTT_BROKER = "esp32-product-check-production.up.railway.app"
+# ✅ Dùng HiveMQ làm MQTT Broker (Thay nếu bạn có MQTT broker riêng)
+MQTT_BROKER = "broker.hivemq.com"
+MQTT_PORT = 1883
 MQTT_TOPIC_SUB = "iot/product/result"
 MQTT_TOPIC_PUB = "iot/product/image"
 
@@ -16,17 +18,17 @@ client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
 
 def on_connect(client, userdata, flags, reason_code, properties=None):
     if reason_code == 0:
-        print(" Connected to MQTT Broker!")
+        print("✅ Kết nối MQTT thành công!")
         client.subscribe(MQTT_TOPIC_SUB)
     else:
-        print(f"⚠ Connection failed with reason code {reason_code}")
+        print(f"⚠ Kết nối thất bại, mã lỗi: {reason_code}")
 
 def on_message(client, userdata, msg):
-    print(f" Nhận dữ liệu từ MQTT: {msg.payload[:100]}...")
+    print(f"📩 Nhận dữ liệu từ MQTT: {msg.payload[:100]}...")
     try:
         data = json.loads(msg.payload.decode())
         if "image" in data:
-            print(" Ảnh nhận được! Đang xử lý...")
+            print("🖼 Ảnh nhận được, đang xử lý...")
             img_data = base64.b64decode(data["image"])
             np_arr = np.frombuffer(img_data, np.uint8)
             img = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
@@ -34,11 +36,11 @@ def on_message(client, userdata, msg):
                 result = detect_defect(img)
                 response = {"status": result}
                 client.publish(MQTT_TOPIC_PUB, json.dumps(response))
-                print(" Xử lý xong, gửi kết quả:", result)
+                print("✅ Xử lý xong, kết quả:", result)
             else:
-                print(" Lỗi: Hình ảnh giải mã bị NULL")
+                print("❌ Lỗi: Ảnh không hợp lệ")
     except Exception as e:
-        print(f" Lỗi khi xử lý MQTT: {e}")
+        print(f"❌ Lỗi khi xử lý MQTT: {e}")
 
 def detect_defect(img):
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
@@ -61,8 +63,8 @@ def upload():
 if __name__ == "__main__":
     client.on_connect = on_connect
     client.on_message = on_message
-    print(" Đang kết nối MQTT...")
-    client.connect(MQTT_BROKER, 1883, 60)
+    print("🚀 Kết nối MQTT...")
+    client.connect(MQTT_BROKER, MQTT_PORT, 60)
     client.loop_start()
-    port = int(os.environ.get("PORT", 5000))  # Lấy cổng từ biến môi trường Railway
+    port = int(os.environ.get("PORT", 5000))  # Lấy cổng từ Railway
     app.run(host="0.0.0.0", port=port)
