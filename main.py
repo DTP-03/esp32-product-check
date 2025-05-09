@@ -1,30 +1,54 @@
 from flask import Flask, request, jsonify
-import cv2
 import numpy as np
-import base64
-import os
+import cv2
 
 app = Flask(__name__)
 
-def detect_defect(img):
-    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    _, thresh = cv2.threshold(gray, 100, 255, cv2.THRESH_BINARY)
-    contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    return "error" if len(contours) > 10 else "ok"
+def is_red_circle(img):
+    # Resize để tăng tốc độ
+    img = cv2.resize(img, (320, 240))
+    # Chuyển ảnh sang HSV
+    hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
 
-@app.route('/process', methods=['POST'])
-def process():
-    data = request.get_json()
-    if "image" not in data:
-        return jsonify({"error": "No image provided"}), 400
-    
-    img_data = base64.b64decode(data["image"])
-    np_arr = np.frombuffer(img_data, np.uint8)
-    img = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
-    
-    result = detect_defect(img)
-    return jsonify({"status": result})  # Trả về HTTP thay vì MQTT
+    # Phạm vi màu đỏ trong HSV
+    lower_red1 = np.array([0, 100, 100])
+    upper_red1 = np.array([10, 255, 255])
+    lower_red2 = np.array([160, 100, 100])
+    upper_red2 = np.array([180, 255, 255])
 
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port)
+    # Tạo mask cho màu đỏ
+    mask1 = cv2.inRange(hsv, lower_red1, upper_red1)
+    mask2 = cv2.inRange(hsv, lower_red2, upper_red2)
+    red_mask = cv2.bitwise_or(mask1, mask2)
+
+    # Tìm contours
+    contours, _ = cv2.findContours(red_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+    for cnt in contours:
+        area = cv2.contourArea(cnt)
+        if area > 500:  # Lọc vùng nhỏ
+            (x, y), radius = cv2.minEnclosingCircle(cnt)
+            circle_area = 3.14 * radius * radius
+            if 0.7 < area / circle_area < 1.3:
+                return True
+    return False
+
+@app.route('/detect', methods=['POST'])
+def detect():
+    try:
+        file = request.data
+        np_arr = np.frombuffer(file, np.uint8)
+        img = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
+
+        if img is None:
+            return jsonify({'result': 'ERROR', 'reason': 'Invalid image'}), 400
+
+        if is_red_circle(img):
+            return jsonify({'result': 'OK'})
+        else:
+            return jsonify({'result': 'ERROR'})
+    except Exception as e:
+        return jsonify({'result': 'ERROR', 'reason': str(e)}), 500
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000)
