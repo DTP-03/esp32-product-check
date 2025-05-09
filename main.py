@@ -28,7 +28,7 @@ def upload():
         result = recognize_product(img)
         return jsonify({'status': result})
     except Exception as e:
-        return jsonify({'status': 'ERROR', 'reason': str(e)}), 500
+        return jsonify({'status': 'error', 'reason': str(e)}), 500
 
 def recognize_product(img):
     hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
