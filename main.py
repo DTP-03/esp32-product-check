@@ -8,14 +8,17 @@ app = Flask(__name__)
 UPLOAD_FOLDER = 'uploads'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
+mode = 'auto'  # Mặc định Auto
+latest_status = 'None'  # Gửi về ESP32
+
 @app.route('/')
 def index():
-    # Truyền giá trị 'status' (OK hoặc ERROR) vào template
-    status = "OK"  # Đây là ví dụ, bạn có thể gọi hàm recognize_product ở đây hoặc từ nơi khác
-    return render_template("status.html", status=status)
+    return render_template("index.html", status=latest_status)
 
 @app.route('/upload', methods=['POST'])
 def upload():
+    global latest_status
+
     try:
         image_bytes = request.data
         nparr = np.frombuffer(image_bytes, np.uint8)
@@ -26,10 +29,34 @@ def upload():
         image_path = os.path.join(UPLOAD_FOLDER, f'{timestamp}.jpg')
         cv2.imwrite(image_path, img)
 
-        result = recognize_product(img)
-        return jsonify({'status': result})
+        if mode == 'auto':
+            result = recognize_product(img)
+            latest_status = result
+            return jsonify({'status': result})
+        else:
+            return jsonify({'status': 'manual_mode'})
+
     except Exception as e:
         return jsonify({'status': 'error', 'reason': str(e)}), 500
+
+@app.route('/set_mode', methods=['POST'])
+def set_mode():
+    global mode
+    data = request.get_json()
+    mode = data.get('mode', 'auto')
+    return jsonify({'mode': mode})
+
+@app.route('/manual_status', methods=['POST'])
+def manual_status():
+    global latest_status
+    data = request.get_json()
+    status = data.get('status', 'ERROR')
+    latest_status = status
+    return jsonify({'status': status})
+
+@app.route('/get_status', methods=['GET'])
+def get_status():
+    return jsonify({'status': latest_status})
 
 def recognize_product(img):
     hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
@@ -37,7 +64,6 @@ def recognize_product(img):
     upper_red1 = np.array([10, 255, 255])
     lower_red2 = np.array([160, 100, 100])
     upper_red2 = np.array([179, 255, 255])
-
     mask1 = cv2.inRange(hsv, lower_red1, upper_red1)
     mask2 = cv2.inRange(hsv, lower_red2, upper_red2)
     mask = mask1 | mask2
