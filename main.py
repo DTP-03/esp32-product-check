@@ -1,80 +1,60 @@
-from flask import Flask, request, jsonify, render_template
+from flask import Flask, request, render_template, jsonify
+from datetime import datetime
+import os
 import cv2
 import numpy as np
-import os
-import time
-from datetime import datetime
 
 app = Flask(__name__)
-UPLOAD_FOLDER = 'uploads'
+UPLOAD_FOLDER = 'static/uploads'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-mode = 'auto'
-latest_status = 'None'
+mode = "auto"
+latest_result = {"status": "WAITING", "timestamp": ""}
+
+def detect_defect(img_path):
+    # Hàm nhận diện đơn giản (thay thế bằng OpenCV tùy bạn)
+    img = cv2.imread(img_path)
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    mean_val = np.mean(gray)
+    return "ERROR" if mean_val < 100 else "OK"
 
 @app.route('/')
 def index():
-    return render_template("index.html", status=latest_status, mode=mode, timestamp=time.time())
+    return render_template('index.html')
 
 @app.route('/upload', methods=['POST'])
-def upload():
-    global latest_status
-    try:
-        image_bytes = request.data
-        nparr = np.frombuffer(image_bytes, np.uint8)
-        img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+def upload_image():
+    global latest_result
+    now = datetime.now().strftime("%Y%m%d-%H%M%S")
+    filename = f"{now}.jpg"
+    filepath = os.path.join(UPLOAD_FOLDER, filename)
+    with open(filepath, 'wb') as f:
+        f.write(request.data)
 
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        image_path = os.path.join(UPLOAD_FOLDER, f'{timestamp}.jpg')
-        cv2.imwrite(image_path, img)
-        cv2.imwrite(os.path.join('static', 'latest.jpg'), img)
+    if mode == "auto":
+        result = detect_defect(filepath)
+    else:
+        result = latest_result["status"]  # Giữ nguyên status cũ trong manual
 
-        if mode == 'auto':
-            result = recognize_product(img)
-            latest_status = result
-            return jsonify({'status': result})
-        else:
-            return jsonify({'status': 'manual_mode'})
-    except Exception as e:
-        return jsonify({'status': 'error', 'reason': str(e)}), 500
+    latest_result = {"status": result, "timestamp": now, "image": filename}
+    return jsonify(latest_result)
 
-@app.route('/set_mode', methods=['POST'])
+@app.route('/status')
+def get_status():
+    return jsonify(latest_result)
+
+@app.route('/set-mode', methods=['POST'])
 def set_mode():
     global mode
-    data = request.get_json()
-    mode = data.get('mode', 'auto')
-    return jsonify({'mode': mode})
+    mode = request.json.get("mode")
+    return jsonify({"mode": mode})
 
-@app.route('/manual_status', methods=['POST'])
-def manual_status():
-    global latest_status
-    data = request.get_json()
-    latest_status = data.get('status', 'ERROR')
-    return jsonify({'status': latest_status})
-
-@app.route('/get_status', methods=['GET'])
-def get_status():
-    return jsonify({'status': latest_status})
-
-def recognize_product(img):
-    hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
-    lower_red1 = np.array([0, 100, 100])
-    upper_red1 = np.array([10, 255, 255])
-    lower_red2 = np.array([160, 100, 100])
-    upper_red2 = np.array([179, 255, 255])
-    mask1 = cv2.inRange(hsv, lower_red1, upper_red1)
-    mask2 = cv2.inRange(hsv, lower_red2, upper_red2)
-    mask = mask1 | mask2
-
-    contours, _ = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-    for c in contours:
-        area = cv2.contourArea(c)
-        perimeter = cv2.arcLength(c, True)
-        if area > 1000 and perimeter > 100:
-            approx = cv2.approxPolyDP(c, 0.04 * perimeter, True)
-            if len(approx) > 8:
-                return "OK"
-    return "ERROR"
+@app.route('/manual-result', methods=['POST'])
+def manual_result():
+    global latest_result
+    result = request.json.get("result")
+    latest_result["status"] = result
+    return jsonify({"status": result})
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
+    app.run(debug=True)
