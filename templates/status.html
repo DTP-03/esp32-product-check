@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>ESP32-CAM Product Status</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding: 30px;
+      background-color: #f4f4f4;
+    }
+    img {
+      max-width: 90%;
+      height: auto;
+      border: 5px solid #ccc;
+      margin-bottom: 20px;
+    }
+    .status {
+      font-size: 1.5rem;
+      font-weight: bold;
+    }
+    .ok {
+      color: green;
+    }
+    .not-ok {
+      color: red;
+    }
+  </style>
+</head>
+<body>
+  <h1>ESP32-CAM Product Status</h1>
+  <img src="{{ url_for('static', filename='latest.jpg') }}" alt="Latest Capture">
+  <div class="status {{ 'ok' if status == 'OK' else 'not-ok' }}">
+    Status: {{ status }}
+  </div>
+</body>
+</html>
+
