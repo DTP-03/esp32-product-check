@@ -2,32 +2,32 @@ from flask import Flask, request, jsonify, render_template
 import cv2
 import numpy as np
 import os
+import time
 from datetime import datetime
 
 app = Flask(__name__)
 UPLOAD_FOLDER = 'uploads'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-mode = 'auto'  # Mặc định Auto
-latest_status = 'None'  # Gửi về ESP32
+mode = 'auto'
+latest_status = 'None'
 
 @app.route('/')
 def index():
-    return render_template("index.html", status=latest_status, timestamp=time.time())
+    return render_template("index.html", status=latest_status, mode=mode, timestamp=time.time())
 
 @app.route('/upload', methods=['POST'])
 def upload():
     global latest_status
-
     try:
         image_bytes = request.data
         nparr = np.frombuffer(image_bytes, np.uint8)
         img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
 
-        # Save image with timestamp
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         image_path = os.path.join(UPLOAD_FOLDER, f'{timestamp}.jpg')
         cv2.imwrite(image_path, img)
+        cv2.imwrite(os.path.join('static', 'latest.jpg'), img)
 
         if mode == 'auto':
             result = recognize_product(img)
@@ -35,7 +35,6 @@ def upload():
             return jsonify({'status': result})
         else:
             return jsonify({'status': 'manual_mode'})
-
     except Exception as e:
         return jsonify({'status': 'error', 'reason': str(e)}), 500
 
@@ -50,9 +49,8 @@ def set_mode():
 def manual_status():
     global latest_status
     data = request.get_json()
-    status = data.get('status', 'ERROR')
-    latest_status = status
-    return jsonify({'status': status})
+    latest_status = data.get('status', 'ERROR')
+    return jsonify({'status': latest_status})
 
 @app.route('/get_status', methods=['GET'])
 def get_status():
