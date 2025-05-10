@@ -5,7 +5,7 @@ import cv2
 import numpy as np
 
 app = Flask(__name__)
-UPLOAD_FOLDER = 'static/uploads'
+UPLOAD_FOLDER = 'static/latest.jpg'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 mode = "auto"
@@ -17,7 +17,6 @@ def detect_defect(img_path):
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     mean_val = np.mean(gray)
     return "ERROR" if mean_val < 100 else "OK"
-
 @app.route('/')
 def index():
     return render_template('index.html')
