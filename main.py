@@ -13,7 +13,7 @@ latest_status = 'None'  # Gửi về ESP32
 
 @app.route('/')
 def index():
-    return render_template("index.html", status=latest_status)
+    return render_template("index.html", status=latest_status, timestamp=time.time())
 
 @app.route('/upload', methods=['POST'])
 def upload():
