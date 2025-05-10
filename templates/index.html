@@ -14,7 +14,8 @@
 </head>
 <body>
   <h1>ESP32-CAM Product Status</h1>
-  <img src="{{ url_for('static', filename='latest.jpg') }}" alt="Latest Capture" width="300"><br>
+  <img src="{{ url_for('static', filename='latest.jpg') }}?t={{ timestamp }}" alt="Latest Capture" width="300">
+<br>
 
   <!-- Switch Auto/Manual -->
   <div>
