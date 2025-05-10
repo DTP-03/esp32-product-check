@@ -12,7 +12,8 @@ status_result = "Unknown"
 
 @app.route('/')
 def index():
-    return 'Server is running!'
+    # Render trang status, truyền biến status vào nếu cần
+    return render_template("status.html", status="OK")  # hoặc truyền biến thực tế từ server
 
 @app.route('/upload', methods=['POST'])
 def upload():
