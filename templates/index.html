@@ -4,33 +4,119 @@
   <meta charset="UTF-8">
   <title>ESP32-CAM Product Status</title>
   <style>
-    body { font-family: Arial; text-align: center; background-color: #f4f4f4; padding: 30px; }
-    img { max-width: 90%; border: 5px solid #ccc; margin-bottom: 20px; }
-    .status { font-size: 1.5rem; font-weight: bold; }
-    .ok { color: green; }
-    .not-ok { color: red; }
-    button { margin: 10px; padding: 10px 20px; font-size: 1rem; }
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f0f2f5;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    h1 {
+      margin: 30px 0 10px;
+      color: #333;
+    }
+
+    .container {
+      background: #fff;
+      padding: 20px 30px;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      max-width: 600px;
+      width: 100%;
+      text-align: center;
+    }
+
+    img {
+      max-width: 100%;
+      border-radius: 10px;
+      border: 3px solid #ddd;
+      margin-bottom: 20px;
+    }
+
+    .status {
+      font-size: 1.4rem;
+      margin-bottom: 15px;
+      font-weight: 600;
+    }
+
+    .ok {
+      color: green;
+    }
+
+    .not-ok {
+      color: red;
+    }
+
+    .mode-switch {
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    select {
+      font-size: 1rem;
+      padding: 6px 12px;
+      border-radius: 6px;
+    }
+
+    .manual-controls {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      margin-bottom: 10px;
+    }
+
+    button {
+      padding: 10px 20px;
+      font-size: 1rem;
+      font-weight: 600;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+
+    button.ok-btn {
+      background-color: #28a745;
+      color: white;
+    }
+
+    button.error-btn {
+      background-color: #dc3545;
+      color: white;
+    }
+
+    button:hover {
+      opacity: 0.9;
+    }
   </style>
 </head>
 <body>
   <h1>ESP32-CAM Product Status</h1>
-  <img src="/static/latest.jpg?ts={{ timestamp }}" alt="Latest Capture">
+  <div class="container">
+    <img src="/static/latest.jpg?ts={{ timestamp }}" alt="Latest Capture">
+    
+    <div class="status {{ 'ok' if status == 'OK' else 'not-ok' }}">
+      Status: {{ status }}
+    </div>
 
-  <div class="status {{ 'ok' if status == 'OK' else 'not-ok' }}">
-    Status: {{ status }}
-  </div>
+    <div class="mode-switch">
+      <label for="mode-select">Mode:</label>
+      <select id="mode-select">
+        <option value="auto" {% if mode == 'auto' %}selected{% endif %}>Auto</option>
+        <option value="manual" {% if mode == 'manual' %}selected{% endif %}>Manual</option>
+      </select>
+    </div>
 
-  <div>
-    <label>Mode:</label>
-    <select id="mode-select">
-      <option value="auto" {% if mode == 'auto' %}selected{% endif %}>Auto</option>
-      <option value="manual" {% if mode == 'manual' %}selected{% endif %}>Manual</option>
-    </select>
-  </div>
-
-  <div id="manual-buttons" style="display: {{ 'block' if mode == 'manual' else 'none' }}">
-    <button onclick="sendManualStatus('OK')">OK</button>
-    <button onclick="sendManualStatus('ERROR')">ERROR</button>
+    <div id="manual-buttons" class="manual-controls" style="display: {{ 'flex' if mode == 'manual' else 'none' }}">
+      <button class="ok-btn" onclick="sendManualStatus('OK')">✔ OK</button>
+      <button class="error-btn" onclick="sendManualStatus('ERROR')">✖ ERROR</button>
+    </div>
   </div>
 
   <script>
@@ -44,7 +130,7 @@
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ mode })
       }).then(() => {
-        manualButtons.style.display = mode === "manual" ? "block" : "none";
+        manualButtons.style.display = mode === "manual" ? "flex" : "none";
       });
     });
 
