@@ -4,35 +4,57 @@
   <meta charset="UTF-8">
   <title>ESP32-CAM Product Status</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      text-align: center;
-      padding: 30px;
-      background-color: #f4f4f4;
-    }
-    img {
-      max-width: 90%;
-      height: auto;
-      border: 5px solid #ccc;
-      margin-bottom: 20px;
-    }
-    .status {
-      font-size: 1.5rem;
-      font-weight: bold;
-    }
-    .ok {
-      color: green;
-    }
-    .not-ok {
-      color: red;
-    }
+    body { font-family: Arial; text-align: center; background-color: #f4f4f4; padding: 30px; }
+    .status { font-size: 1.5rem; font-weight: bold; margin: 20px; }
+    .ok { color: green; }
+    .not-ok { color: red; }
+    .switch-btn { margin: 10px; font-size: 1.1rem; padding: 10px 20px; }
+    .manual-controls { display: none; margin-top: 20px; }
   </style>
 </head>
 <body>
   <h1>ESP32-CAM Product Status</h1>
-  <img src="{{ url_for('static', filename='latest.jpg') }}" alt="Latest Capture">
+  <img src="{{ url_for('static', filename='latest.jpg') }}" alt="Latest Capture" width="300"><br>
+
+  <!-- Switch Auto/Manual -->
+  <div>
+    <label for="modeSwitch">Mode: </label>
+    <select id="modeSwitch" onchange="toggleMode()">
+      <option value="auto" selected>Auto</option>
+      <option value="manual">Manual</option>
+    </select>
+  </div>
+
+  <!-- Manual control buttons -->
+  <div class="manual-controls" id="manualControls">
+    <button class="switch-btn" onclick="sendStatus('OK')">Send OK</button>
+    <button class="switch-btn" onclick="sendStatus('ERROR')">Send ERROR</button>
+  </div>
+
   <div class="status {{ 'ok' if status == 'OK' else 'not-ok' }}">
     Status: {{ status }}
   </div>
+
+  <script>
+    function toggleMode() {
+      const mode = document.getElementById('modeSwitch').value;
+      const manualControls = document.getElementById('manualControls');
+      manualControls.style.display = (mode === 'manual') ? 'block' : 'none';
+
+      fetch('/set_mode', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode: mode })
+      });
+    }
+
+    function sendStatus(status) {
+      fetch('/manual_status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: status })
+      });
+    }
+  </script>
 </body>
 </html>
