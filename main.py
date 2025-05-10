@@ -12,7 +12,7 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 def index():
     # Truyền giá trị 'status' (OK hoặc ERROR) vào template
     status = "OK"  # Đây là ví dụ, bạn có thể gọi hàm recognize_product ở đây hoặc từ nơi khác
-    return render_template("index.html", status=status)
+    return render_template("status.html", status=status)
 
 @app.route('/upload', methods=['POST'])
 def upload():
