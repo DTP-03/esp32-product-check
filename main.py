@@ -4,19 +4,23 @@ import os
 import cv2
 import numpy as np
 import firebase_admin
-from firebase_admin import credentials, firestore
+from firebase_admin import credentials, firestore, storage
 
 app = Flask(__name__)
 UPLOAD_FOLDER = 'static'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-# Initialize Firebase
-cred = credentials.Certificate("firebase-key.json")
-firebase_admin.initialize_app(cred)
+# Firebase setup
+cred = credentials.Certificate('serviceAccountKey.json')
+firebase_admin.initialize_app(cred, {
+    'storageBucket': 'iot-esp32-a49bc.appspot.com'
+})
 db = firestore.client()
+bucket = storage.bucket()
 
 mode = "auto"
 latest_result = {"status": "WAITING", "timestamp": "", "image": ""}
+last_returned_result = {"status": "", "timestamp": "", "image": ""}
 
 
 def detect_defect(img_path):
@@ -37,7 +41,6 @@ def detect_defect(img_path):
     edges = cv2.Canny(gray, 100, 200)
 
     contours, _ = cv2.findContours(edges, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-
     for contour in contours:
         epsilon = 0.04 * cv2.arcLength(contour, True)
         approx = cv2.approxPolyDP(contour, epsilon, True)
@@ -48,12 +51,12 @@ def detect_defect(img_path):
 
 @app.route('/')
 def index():
-    return render_template('index.html', mode=mode, message="")
+    return render_template('index.html')
 
 
 @app.route('/upload', methods=['POST'])
 def upload_image():
-    global latest_result, mode
+    global latest_result
     now = datetime.now().strftime("%Y%m%d-%H%M%S")
     filename = "latest.jpg"
     filepath = os.path.join(UPLOAD_FOLDER, filename)
@@ -63,21 +66,40 @@ def upload_image():
 
     if mode == "auto":
         result = detect_defect(filepath)
+
+        # Lưu ảnh lên Firebase Storage
+        blob = bucket.blob(f'images/{now}.jpg')
+        blob.upload_from_filename(filepath)
+        blob.make_public()
+
+        # Lưu Firestore
+        db.collection("product_results").add({
+            "timestamp": now,
+            "status": result,
+            "mode": mode,
+            "image_url": blob.public_url
+        })
+
         latest_result = {"status": result, "timestamp": now, "image": filename}
 
-        db.collection("results").add({
-            "status": result,
+        return jsonify({"result": result, "message": "Đã nhận diện, lưu và trả kết quả về ESP32"})
+
+    else:
+        # Chế độ thủ công -> chờ người dùng đánh giá
+        latest_result = {
+            "status": "WAITING",
             "timestamp": now,
-            "image": filename,
-            "mode": mode
-        })
-        return jsonify({"result": result})  # Gửi kết quả đơn giản cho ESP32
-   
+            "image": filename
+        }
+        return jsonify({"message": "Chế độ thủ công - đang chờ người dùng đánh giá"}), 200
 
 
 @app.route('/status')
 def get_status():
-    return jsonify(latest_result)
+    global last_returned_result
+    if latest_result["status"] != "WAITING":
+        last_returned_result = latest_result
+    return jsonify(last_returned_result)
 
 
 @app.route('/set-mode', methods=['POST'])
@@ -89,21 +111,29 @@ def set_mode():
 
 @app.route('/manual-result', methods=['POST'])
 def manual_result():
-    global latest_result, mode
+    global latest_result
     if latest_result["status"] != "WAITING":
-        return jsonify({"error": "Already evaluated."}), 400
+        return jsonify({"error": "Đã được đánh giá trước đó."}), 400
 
     result = request.json.get("result")
-    latest_result["status"] = result
+    now = latest_result["timestamp"]
+    filepath = os.path.join(UPLOAD_FOLDER, latest_result["image"])
 
-    db.collection("results").add({
+    # Lưu ảnh lên Firebase Storage
+    blob = bucket.blob(f'images/{now}.jpg')
+    blob.upload_from_filename(filepath)
+    blob.make_public()
+
+    # Lưu Firestore
+    db.collection("product_results").add({
+        "timestamp": now,
         "status": result,
-        "timestamp": latest_result["timestamp"],
-        "image": latest_result["image"],
-        "mode": mode
+        "mode": mode,
+        "image_url": blob.public_url
     })
 
-    return jsonify({"result": result})  # Gửi kết quả đơn giản cho ESP32
+    latest_result["status"] = result
+    return jsonify({"result": result, "message": "Đã nhận diện, lưu và trả kết quả về ESP32"})
 
 
 if __name__ == '__main__':
