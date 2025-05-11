@@ -10,15 +10,12 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 mode = "auto"
 latest_result = {"status": "WAITING", "timestamp": "", "image": ""}
-last_returned_result = {"status": "", "timestamp": "", "image": ""}
 
 
 def detect_defect(img_path):
-    # Load image and convert to HSV
     img = cv2.imread(img_path)
     hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
 
-    # Detect red areas (example for defect recognition)
     lower_red1 = np.array([0, 120, 70])
     upper_red1 = np.array([10, 255, 255])
     mask1 = cv2.inRange(hsv, lower_red1, upper_red1)
@@ -53,25 +50,25 @@ def upload_image():
     filename = "latest1.jpg"
     filepath = os.path.join(UPLOAD_FOLDER, filename)
 
+    # ✅ Xóa ảnh cũ trước khi ghi ảnh mới
+    if os.path.exists(filepath):
+        os.remove(filepath)
+
     with open(filepath, 'wb') as f:
         f.write(request.data)
 
     if mode == "auto":
         result = detect_defect(filepath)
-
         latest_result = {"status": result, "timestamp": now, "image": filename}
 
-        print(f"Updated image: {filename}, Status: {result}, Timestamp: {now}")
+        print(f"[{now}] Updated image: {filename}, Status: {result}")
 
         return jsonify({"result": result})
 
 
 @app.route('/status')
 def get_status():
-    global last_returned_result
-    if latest_result["status"] != "WAITING":
-        last_returned_result = latest_result
-    return jsonify(last_returned_result)
+    return jsonify(latest_result)
 
 
 @app.route('/set-mode', methods=['POST'])
@@ -88,15 +85,16 @@ def manual_result():
         return jsonify({"error": "Đã được đánh giá trước đó."}), 400
 
     result = request.json.get("result")
-    now = latest_result["timestamp"]
     latest_result["status"] = result
-
     return jsonify({"result": result})
 
 
+# ✅ Ngăn cache HTTP
 @app.after_request
 def add_header(response):
-    response.headers['Cache-Control'] = 'no-store'  # Ngừng cache
+    response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
     return response
 
 
