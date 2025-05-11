@@ -12,7 +12,9 @@ mode = "auto"
 latest_result = {"status": "WAITING", "timestamp": "", "image": ""}
 last_returned_result = {"status": "", "timestamp": "", "image": ""}
 
+
 def detect_defect(img_path):
+    # Load image and convert to HSV
     img = cv2.imread(img_path)
     hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
 
@@ -38,9 +40,11 @@ def detect_defect(img_path):
             return "OK"
     return "ERROR"
 
+
 @app.route('/')
 def index():
     return render_template('index.html', time=datetime.now().timestamp())
+
 
 @app.route('/upload', methods=['POST'])
 def upload_image():
@@ -57,7 +61,10 @@ def upload_image():
 
         latest_result = {"status": result, "timestamp": now, "image": filename}
 
+        print(f"Updated image: {filename}, Status: {result}, Timestamp: {now}")
+
         return jsonify({"result": result})
+
 
 @app.route('/status')
 def get_status():
@@ -66,11 +73,13 @@ def get_status():
         last_returned_result = latest_result
     return jsonify(last_returned_result)
 
+
 @app.route('/set-mode', methods=['POST'])
 def set_mode():
     global mode
     mode = request.json.get("mode")
     return jsonify({"mode": mode})
+
 
 @app.route('/manual-result', methods=['POST'])
 def manual_result():
@@ -84,10 +93,12 @@ def manual_result():
 
     return jsonify({"result": result})
 
+
 @app.after_request
 def add_header(response):
-    response.headers['Cache-Control'] = 'no-store'
+    response.headers['Cache-Control'] = 'no-store'  # Ngừng cache
     return response
+
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
