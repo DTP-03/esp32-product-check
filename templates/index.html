@@ -2,52 +2,158 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Product Status</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Product Inspection</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <style>
-        body { font-family: Arial, sans-serif; text-align: center; padding: 40px; }
-        img { width: 400px; height: auto; border: 2px solid #000; margin-top: 20px; }
-        .status { font-size: 24px; font-weight: bold; margin-top: 20px; }
-        button { padding: 10px 20px; font-size: 16px; margin: 10px; }
+        img {
+            width: 100%;
+            max-width: 500px;
+            height: auto;
+        }
+        .status {
+            font-size: 1.5em;
+        }
+        .status-waiting {
+            color: gray;
+        }
+        .status-ok {
+            color: green;
+        }
+        .status-error {
+            color: red;
+        }
+        .mode {
+            font-size: 1.2em;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
-    <h1>Product Status Monitor</h1>
-
-    <div class="status" id="status">Status: WAITING</div>
-    <img id="productImage" src="/static/latest1.jpg?ts={{ time }}" alt="Latest Product Image">
-
+    <h1>Product Inspection System</h1>
+    
+    <!-- Hiển thị ảnh và trạng thái sản phẩm -->
     <div>
-        <button onclick="setMode('auto')">Auto Mode</button>
-        <button onclick="setMode('manual')">Manual Mode</button>
+        <h2>Latest Image</h2>
+        <img id="latest-image" src="static/latest1.jpg?t={{ time }}" alt="Latest Product Image">
+        <p id="status" class="status status-waiting">Status: WAITING</p>
+        <p id="timestamp">Timestamp: </p>
+    </div>
+
+    <!-- Điều khiển hệ thống -->
+    <div>
+        <h2>System Controls</h2>
+        <div>
+            <label for="mode">Mode: </label>
+            <button id="mode-auto">Auto</button>
+            <button id="mode-manual">Manual</button>
+        </div>
+        <div id="manual-controls" style="display:none;">
+            <button id="result-ok">OK</button>
+            <button id="result-error">ERROR</button>
+        </div>
+        <div id="system-control">
+            <button id="stop-system">Stop System</button>
+            <button id="start-system" style="display:none;">Start System</button>
+        </div>
     </div>
 
     <script>
-        function updateStatus() {
-            fetch('/status')
-                .then(response => response.json())
-                .then(data => {
-                    document.getElementById('status').textContent = "Status: " + data.status;
-
-                    // Cập nhật ảnh nếu có timestamp mới
-                    const img = document.getElementById('productImage');
-                    img.src = '/static/' + data.image + '?ts=' + new Date().getTime();
+        $(document).ready(function() {
+            // Tự động cập nhật ảnh và trạng thái
+            function updateStatus() {
+                $.get('/status', function(data) {
+                    const time = new Date().getTime();
+                    $('#latest-image').attr('src', `static/${data.image}?t=${time}`);
+                    $('#status').text(`Status: ${data.status}`).removeClass('status-waiting status-ok status-error').addClass(`status-${data.status.toLowerCase()}`);
+                    $('#timestamp').text(`Timestamp: ${data.timestamp}`);
                 });
-        }
+            }
 
-        function setMode(mode) {
-            fetch('/set-mode', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ mode: mode })
-            })
-            .then(response => response.json())
-            .then(data => {
-                alert('Mode set to: ' + data.mode);
+            // Cập nhật trạng thái mỗi 5 giây
+            setInterval(updateStatus, 5000);
+
+            // Thay đổi chế độ
+            $('#mode-auto').click(function() {
+                $.ajax({
+                    url: '/set-mode',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ mode: 'auto' }),
+                    success: function() {
+                        $('#mode-auto').prop('disabled', true);
+                        $('#mode-manual').prop('disabled', false);
+                        $('#manual-controls').hide();
+                    }
+                });
             });
-        }
 
-        // Cập nhật liên tục mỗi 2 giây
-        setInterval(updateStatus, 2000);
+            $('#mode-manual').click(function() {
+                $.ajax({
+                    url: '/set-mode',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ mode: 'manual' }),
+                    success: function() {
+                        $('#mode-auto').prop('disabled', false);
+                        $('#mode-manual').prop('disabled', true);
+                        $('#manual-controls').show();
+                    }
+                });
+            });
+
+            // Gửi kết quả thủ công
+            $('#result-ok').click(function() {
+                $.ajax({
+                    url: '/manual-result',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ result: 'OK' }),
+                    success: function() {
+                        alert('Result submitted: OK');
+                    }
+                });
+            });
+
+            $('#result-error').click(function() {
+                $.ajax({
+                    url: '/manual-result',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ result: 'ERROR' }),
+                    success: function() {
+                        alert('Result submitted: ERROR');
+                    }
+                });
+            });
+
+            // Dừng/Khởi động hệ thống
+            $('#stop-system').click(function() {
+                $.ajax({
+                    url: '/set-mode',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ mode: 'WAITING' }),
+                    success: function() {
+                        $('#stop-system').hide();
+                        $('#start-system').show();
+                    }
+                });
+            });
+
+            $('#start-system').click(function() {
+                $.ajax({
+                    url: '/set-mode',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ mode: 'auto' }),
+                    success: function() {
+                        $('#stop-system').show();
+                        $('#start-system').hide();
+                    }
+                });
+            });
+        });
     </script>
 </body>
 </html>
