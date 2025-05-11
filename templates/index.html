@@ -2,84 +2,66 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>ESP32 Product Inspection</title>
-  <style>
-    body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f4f4; }
-    img { max-width: 100%; height: auto; border: 2px solid #444; margin-bottom: 20px; }
-    .status { font-weight: bold; margin-top: 10px; }
-    .controls { margin-top: 20px; }
-    .message { color: green; margin-top: 10px; font-weight: bold; }
-    button { margin-right: 10px; padding: 8px 16px; }
-  </style>
+  <title>ESP32 Product Check</title>
 </head>
 <body>
-  <h2>ESP32 Product Defect Inspection</h2>
+  <h1>Ảnh mới nhất</h1>
+  <img id="latestImage" src="/static/latest.jpg" width="400">
+  <p id="statusText">Trạng thái: Đang chờ...</p>
 
-  <h4>Current Mode: <span id="current-mode">Loading...</span></h4>
-  <div class="controls">
-    <button onclick="setMode('auto')">Auto Mode</button>
-    <button onclick="setMode('manual')">Manual Mode</button>
+  <h2>Chọn chế độ</h2>
+  <button onclick="setMode('auto')">Auto</button>
+  <button onclick="setMode('manual')">Manual</button>
+
+  <div id="manualControls" style="display:none">
+    <h3>Đánh giá thủ công</h3>
+    <button onclick="manualSubmit('OK')">OK</button>
+    <button onclick="manualSubmit('ERROR')">ERROR</button>
   </div>
 
-  <h3>Latest Uploaded Image:</h3>
-  <img id="latest-image" src="/static/latest.jpg" alt="Latest image">
-
-  <div class="status" id="result-status">Status: WAITING</div>
-
-  <div class="controls" id="manual-controls" style="display: none">
-    <button onclick="submitManualResult('OK')">Mark as OK</button>
-    <button onclick="submitManualResult('ERROR')">Mark as ERROR</button>
-  </div>
-
-  <div class="message" id="message-box"></div>
+  <p id="responseText"></p>
 
   <script>
+    let lastTimestamp = "";
+
+    async function checkImageUpdate() {
+      const res = await fetch('/status');
+      const data = await res.json();
+      document.getElementById("statusText").innerText = "Trạng thái: " + data.status;
+
+      if (data.timestamp !== lastTimestamp && data.status !== "WAITING") {
+        lastTimestamp = data.timestamp;
+        document.getElementById("latestImage").src = "/static/latest.jpg?t=" + new Date().getTime();
+        document.getElementById("responseText").innerText = "";
+      }
+    }
+
     async function setMode(mode) {
-      await fetch('/set-mode', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const res = await fetch("/set-mode", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ mode })
       });
-      document.getElementById('current-mode').textContent = mode.toUpperCase();
-      document.getElementById('manual-controls').style.display = (mode === 'manual') ? 'block' : 'none';
-      loadStatus();
+      document.getElementById("manualControls").style.display = (mode === "manual") ? "block" : "none";
+      alert("Đã chọn chế độ " + mode.toUpperCase());
     }
 
-    async function loadStatus() {
-      const res = await fetch('/status');
-      const data = await res.json();
-      if (data.status) {
-        document.getElementById('result-status').textContent = 'Status: ' + data.status;
-        if (data.image) {
-          document.getElementById('latest-image').src = '/static/' + data.image + '?t=' + new Date().getTime();
-        }
-      }
-      if (data.message) {
-        document.getElementById('message-box').textContent = data.message;
-      }
-    }
-
-    async function submitManualResult(result) {
-      const res = await fetch('/manual-result', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+    async function manualSubmit(result) {
+      const res = await fetch("/manual-result", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ result })
       });
+
       const data = await res.json();
-      if (data.status) {
-        document.getElementById('result-status').textContent = 'Status: ' + data.status;
-        document.getElementById('message-box').textContent = 'Đã nhận diện, lưu và trả kết quả về ESP32';
-      } else if (data.error) {
-        document.getElementById('message-box').textContent = data.error;
+      if (data.message) {
+        document.getElementById("responseText").innerText = data.message;
+      } else {
+        alert(data.error);
       }
     }
 
-    setInterval(loadStatus, 3000);
-    window.onload = async () => {
-      const res = await fetch('/status');
-      const data = await res.json();
-      document.getElementById('current-mode').textContent = data.mode ? data.mode.toUpperCase() : 'UNKNOWN';
-    }
+    setInterval(checkImageUpdate, 2000);
   </script>
 </body>
 </html>
