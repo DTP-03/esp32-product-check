@@ -49,7 +49,7 @@ def index():
 def upload_image():
     global latest_result
     now = datetime.now().strftime("%Y%m%d-%H%M%S")
-    filename = "latest.jpg"
+    filename = "latest1.jpg"
     filepath = os.path.join(UPLOAD_FOLDER, filename)
 
     with open(filepath, 'wb') as f:
