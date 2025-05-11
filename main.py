@@ -69,7 +69,7 @@ def upload_image():
 
         # Lưu ảnh lên Firebase Storage
         blob = bucket.blob(f'images/{now}.jpg')
-        blob.upload_from_filename(filepath)
+        #blob.upload_from_filename(filepath)
         blob.make_public()
 
         # Lưu Firestore
