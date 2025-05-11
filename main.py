@@ -4,59 +4,37 @@ import os
 import cv2
 import numpy as np
 
-app = Flask(__name__)  # Sửa lỗi ở đây
+app = Flask(__name__)
 UPLOAD_FOLDER = 'static'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 mode = "auto"
-latest_result = {"status": "WAITING", "timestamp": ""}
+latest_result = {"status": "WAITING", "timestamp": "", "image": ""}
 
 def detect_defect(img_path):
-    """
-    Hàm nhận diện sản phẩm có hình tứ giác màu đỏ
-    """
-    # Đọc ảnh
     img = cv2.imread(img_path)
-
-    # Chuyển ảnh sang không gian màu HSV để dễ dàng xử lý màu sắc
     hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
 
-    # Xác định phạm vi màu đỏ trong không gian HSV
-    lower_red = np.array([0, 120, 70])
-    upper_red = np.array([10, 255, 255])
-    mask1 = cv2.inRange(hsv, lower_red, upper_red)
+    lower_red1 = np.array([0, 120, 70])
+    upper_red1 = np.array([10, 255, 255])
+    mask1 = cv2.inRange(hsv, lower_red1, upper_red1)
 
-    lower_red = np.array([170, 120, 70])
-    upper_red = np.array([180, 255, 255])
-    mask2 = cv2.inRange(hsv, lower_red, upper_red)
+    lower_red2 = np.array([170, 120, 70])
+    upper_red2 = np.array([180, 255, 255])
+    mask2 = cv2.inRange(hsv, lower_red2, upper_red2)
 
-    # Kết hợp các mask
     mask = cv2.bitwise_or(mask1, mask2)
-
-    # Áp dụng mask vào ảnh để chỉ giữ lại các vùng đỏ
     red_area = cv2.bitwise_and(img, img, mask=mask)
-
-    # Chuyển sang ảnh xám và phát hiện các cạnh
     gray = cv2.cvtColor(red_area, cv2.COLOR_BGR2GRAY)
     edges = cv2.Canny(gray, 100, 200)
 
-    # Tìm các đường viền trong ảnh
     contours, _ = cv2.findContours(edges, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
-    # Kiểm tra các hình dạng (số lượng điểm của mỗi contour)
     for contour in contours:
-        # Làm phẳng contour và tính chu vi
         epsilon = 0.04 * cv2.arcLength(contour, True)
         approx = cv2.approxPolyDP(contour, epsilon, True)
-
-        # Kiểm tra nếu contour có 4 cạnh (hình tứ giác)
-        if len(approx) == 4:
-            # Kiểm tra diện tích hình tứ giác để tránh các lỗi phát hiện nhỏ
-            area = cv2.contourArea(contour)
-            if area > 1000:  # Chỉ chấp nhận những hình có diện tích đủ lớn
-                return "OK"
-
-    # Nếu không tìm thấy hình tứ giác màu đỏ, trả về ERROR
+        if len(approx) == 4 and cv2.contourArea(contour) > 1000:
+            return "OK"
     return "ERROR"
 
 @app.route('/')
@@ -67,18 +45,16 @@ def index():
 def upload_image():
     global latest_result
     now = datetime.now().strftime("%Y%m%d-%H%M%S")
-    filename ="latest.jpg"
+    filename = "latest.jpg"
     filepath = os.path.join(UPLOAD_FOLDER, filename)
-    
-    # Lưu ảnh vào thư mục static/latest
+
     with open(filepath, 'wb') as f:
         f.write(request.data)
 
-    # Kiểm tra chế độ và thực hiện nhận diện
     if mode == "auto":
-        result = detect_defect(filepath)  # Gọi hàm nhận diện sản phẩm
+        result = detect_defect(filepath)
     else:
-        result = latest_result["status"]  # Giữ nguyên status cũ trong chế độ thủ công
+        result = "WAITING"  # Chờ người dùng đánh giá nếu ở chế độ manual
 
     latest_result = {"status": result, "timestamp": now, "image": filename}
     return jsonify(latest_result)
@@ -96,11 +72,12 @@ def set_mode():
 @app.route('/manual-result', methods=['POST'])
 def manual_result():
     global latest_result
+    if latest_result["status"] != "WAITING":
+        return jsonify({"error": "Result already submitted or not waiting."}), 400
     result = request.json.get("result")
     latest_result["status"] = result
     return jsonify({"status": result})
 
 if __name__ == '__main__':
-    port = int(os.environ.get("PORT", 5000))  # Lấy port từ Render (hoặc mặc định 5000)
+    port = int(os.environ.get("PORT", 5000))
     app.run(debug=True, host="0.0.0.0", port=port)
-
