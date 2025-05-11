@@ -17,6 +17,7 @@ def detect_defect(img_path):
     img = cv2.imread(img_path)
     hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
 
+    # Detect red areas (example for defect recognition)
     lower_red1 = np.array([0, 120, 70])
     upper_red1 = np.array([10, 255, 255])
     mask1 = cv2.inRange(hsv, lower_red1, upper_red1)
@@ -41,7 +42,7 @@ def detect_defect(img_path):
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    return render_template('index.html', time=datetime.now().timestamp())
 
 
 @app.route('/upload', methods=['POST'])
@@ -88,6 +89,12 @@ def manual_result():
     latest_result["status"] = result
 
     return jsonify({"result": result})
+
+
+@app.after_request
+def add_header(response):
+    response.headers['Cache-Control'] = 'no-store'
+    return response
 
 
 if __name__ == '__main__':
