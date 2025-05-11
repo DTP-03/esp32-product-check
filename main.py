@@ -82,16 +82,9 @@ def upload_image():
 
         latest_result = {"status": result, "timestamp": now, "image": filename}
 
-        return jsonify({"result": result, "message": "Đã nhận diện, lưu và trả kết quả về ESP32"})
+        return jsonify({"result": result})
 
-    else:
-        # Chế độ thủ công -> chờ người dùng đánh giá
-        latest_result = {
-            "status": "WAITING",
-            "timestamp": now,
-            "image": filename
-        }
-        return jsonify({"message": "Chế độ thủ công - đang chờ người dùng đánh giá"}), 200
+   
 
 
 @app.route('/status')
@@ -133,7 +126,7 @@ def manual_result():
     })
 
     latest_result["status"] = result
-    return jsonify({"result": result, "message": "Đã nhận diện, lưu và trả kết quả về ESP32"})
+    return jsonify({"result": result})
 
 
 if __name__ == '__main__':
