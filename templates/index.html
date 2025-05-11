@@ -1,67 +1,53 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>ESP32 Product Check</title>
+    <meta charset="UTF-8">
+    <title>Product Status</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; padding: 40px; }
+        img { width: 400px; height: auto; border: 2px solid #000; margin-top: 20px; }
+        .status { font-size: 24px; font-weight: bold; margin-top: 20px; }
+        button { padding: 10px 20px; font-size: 16px; margin: 10px; }
+    </style>
 </head>
 <body>
-  <h1>Ảnh mới nhất</h1>
-  <img id="latestImage" src="/static/latest1.jpg?t={{ time }}" width="400">
-  <p id="statusText">Trạng thái: Đang chờ...</p>
+    <h1>Product Status Monitor</h1>
 
-  <h2>Chọn chế độ</h2>
-  <button onclick="setMode('auto')">Auto</button>
-  <button onclick="setMode('manual')">Manual</button>
+    <div class="status" id="status">Status: WAITING</div>
+    <img id="productImage" src="/static/latest1.jpg?ts={{ time }}" alt="Latest Product Image">
 
-  <div id="manualControls" style="display:none">
-    <h3>Đánh giá thủ công</h3>
-    <button onclick="manualSubmit('OK')">OK</button>
-    <button onclick="manualSubmit('ERROR')">ERROR</button>
-  </div>
+    <div>
+        <button onclick="setMode('auto')">Auto Mode</button>
+        <button onclick="setMode('manual')">Manual Mode</button>
+    </div>
 
-  <p id="responseText"></p>
+    <script>
+        function updateStatus() {
+            fetch('/status')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('status').textContent = "Status: " + data.status;
 
-  <script>
-    let lastTimestamp = "";
+                    // Cập nhật ảnh nếu có timestamp mới
+                    const img = document.getElementById('productImage');
+                    img.src = '/static/' + data.image + '?ts=' + new Date().getTime();
+                });
+        }
 
-    async function checkImageUpdate() {
-      const res = await fetch('/status');
-      const data = await res.json();
-      document.getElementById("statusText").innerText = "Trạng thái: " + data.status;
+        function setMode(mode) {
+            fetch('/set-mode', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ mode: mode })
+            })
+            .then(response => response.json())
+            .then(data => {
+                alert('Mode set to: ' + data.mode);
+            });
+        }
 
-      if (data.timestamp !== lastTimestamp && data.status !== "WAITING") {
-        lastTimestamp = data.timestamp;
-        document.getElementById("latestImage").src = "/static/latest1.jpg?t=" + new Date().getTime();
-        document.getElementById("responseText").innerText = "";
-      }
-    }
-
-    async function setMode(mode) {
-      const res = await fetch("/set-mode", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mode })
-      });
-      document.getElementById("manualControls").style.display = (mode === "manual") ? "block" : "none";
-      alert("Đã chọn chế độ " + mode.toUpperCase());
-    }
-
-    async function manualSubmit(result) {
-      const res = await fetch("/manual-result", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ result })
-      });
-
-      const data = await res.json();
-      if (data.message) {
-        document.getElementById("responseText").innerText = data.message;
-      } else {
-        alert(data.error);
-      }
-    }
-
-    setInterval(checkImageUpdate, 1000);  // Kiểm tra cập nhật mỗi giây
-  </script>
+        // Cập nhật liên tục mỗi 2 giây
+        setInterval(updateStatus, 2000);
+    </script>
 </body>
 </html>
