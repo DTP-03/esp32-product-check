@@ -77,9 +77,9 @@ def upload_image():
             "mode": "auto"
         })
 
-        return jsonify({"result": result, "message": "Đã nhận diện, lưu và trả kết quả về ESP32"})
+        return jsonify({"result": result})
 
-    return jsonify({"result": "WAITING", "message": "Đang chờ người dùng đánh giá (manual mode)"})
+    
 
 @app.route('/set-mode', methods=['POST'])
 def set_mode():
@@ -108,7 +108,7 @@ def manual_result():
         "mode": "manual"
     })
 
-    return jsonify({"result": result, "message": "Đã nhận diện, lưu và trả kết quả về ESP32"})
+    return jsonify({"result": result})
 
 @app.route('/status', methods=['GET'])
 def get_status():
