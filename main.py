@@ -3,20 +3,10 @@ from datetime import datetime
 import os
 import cv2
 import numpy as np
-import firebase_admin
-from firebase_admin import credentials, firestore, storage
 
 app = Flask(__name__)
 UPLOAD_FOLDER = 'static'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-
-# Firebase setup
-cred = credentials.Certificate('firebase_key.json')
-firebase_admin.initialize_app(cred, {
-    'storageBucket': 'iot-esp32-a49bc.appspot.com'
-})
-db = firestore.client()
-bucket = storage.bucket()
 
 mode = "auto"
 latest_result = {"status": "WAITING", "timestamp": "", "image": ""}
@@ -67,24 +57,9 @@ def upload_image():
     if mode == "auto":
         result = detect_defect(filepath)
 
-        # Lưu ảnh lên Firebase Storage
-        blob = bucket.blob(f'images/{now}.jpg')
-        #blob.upload_from_filename(filepath)
-        blob.make_public()
-
-        # Lưu Firestore
-        db.collection("product_results").add({
-            "timestamp": now,
-            "status": result,
-            "mode": mode,
-            "image_url": blob.public_url
-        })
-
         latest_result = {"status": result, "timestamp": now, "image": filename}
 
         return jsonify({"result": result})
-
-   
 
 
 @app.route('/status')
@@ -110,22 +85,8 @@ def manual_result():
 
     result = request.json.get("result")
     now = latest_result["timestamp"]
-    filepath = os.path.join(UPLOAD_FOLDER, latest_result["image"])
-
-    # Lưu ảnh lên Firebase Storage
-    blob = bucket.blob(f'images/{now}.jpg')
-    blob.upload_from_filename(filepath)
-    blob.make_public()
-
-    # Lưu Firestore
-    db.collection("product_results").add({
-        "timestamp": now,
-        "status": result,
-        "mode": mode,
-        "image_url": blob.public_url
-    })
-
     latest_result["status"] = result
+
     return jsonify({"result": result})
 
 
