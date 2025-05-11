@@ -6,7 +6,7 @@
 </head>
 <body>
   <h1>Ảnh mới nhất</h1>
-  <img id="latestImage" src="/static/latest.jpg?t={{ time }}" width="400">
+  <img id="latestImage" src="/static/latest1.jpg?t={{ time }}" width="400">
   <p id="statusText">Trạng thái: Đang chờ...</p>
 
   <h2>Chọn chế độ</h2>
@@ -31,7 +31,7 @@
 
       if (data.timestamp !== lastTimestamp && data.status !== "WAITING") {
         lastTimestamp = data.timestamp;
-        document.getElementById("latestImage").src = "/static/latest.jpg?t=" + new Date().getTime();
+        document.getElementById("latestImage").src = "/static/latest1.jpg?t=" + new Date().getTime();
         document.getElementById("responseText").innerText = "";
       }
     }
