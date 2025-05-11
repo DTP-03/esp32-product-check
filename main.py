@@ -5,7 +5,7 @@ import cv2
 import numpy as np
 
 app = Flask(__name__)  # Sửa lỗi ở đây
-UPLOAD_FOLDER = 'static/latest'
+UPLOAD_FOLDER = 'static'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 mode = "auto"
@@ -67,7 +67,7 @@ def index():
 def upload_image():
     global latest_result
     now = datetime.now().strftime("%Y%m%d-%H%M%S")
-    filename = f"{now}.jpg"
+    filename ="latest.jpg"
     filepath = os.path.join(UPLOAD_FOLDER, filename)
     
     # Lưu ảnh vào thư mục static/latest
