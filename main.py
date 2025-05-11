@@ -10,6 +10,7 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 mode = "auto"
 latest_result = {"status": "WAITING", "timestamp": "", "image": ""}
+last_returned_result = {"status": "", "timestamp": "", "image": ""}
 
 def detect_defect(img_path):
     img = cv2.imread(img_path)
@@ -54,14 +55,25 @@ def upload_image():
     if mode == "auto":
         result = detect_defect(filepath)
     else:
-        result = "WAITING"  # Chờ người dùng đánh giá nếu ở chế độ manual
+        result = "WAITING"  # chờ người dùng đánh giá
 
     latest_result = {"status": result, "timestamp": now, "image": filename}
     return jsonify(latest_result)
 
 @app.route('/status')
 def get_status():
-    return jsonify(latest_result)
+    global last_returned_result
+
+    if mode == "auto":
+        last_returned_result = latest_result
+        return jsonify(latest_result)
+
+    if mode == "manual":
+        # Chỉ trả về kết quả nếu người dùng đã đánh giá
+        if latest_result["status"] != "WAITING":
+            last_returned_result = latest_result
+            return jsonify(latest_result)
+        
 
 @app.route('/set-mode', methods=['POST'])
 def set_mode():
@@ -73,7 +85,7 @@ def set_mode():
 def manual_result():
     global latest_result
     if latest_result["status"] != "WAITING":
-        return jsonify({"error": "Result already submitted or not waiting."}), 400
+        return jsonify({"error": "Already evaluated."}), 400
     result = request.json.get("result")
     latest_result["status"] = result
     return jsonify({"status": result})
