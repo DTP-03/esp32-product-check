@@ -72,9 +72,7 @@ def upload_image():
             "mode": mode
         })
         return jsonify({"result": result})  # Gửi kết quả đơn giản cho ESP32
-    else:
-        latest_result = {"status": "WAITING", "timestamp": now, "image": filename}
-        return jsonify({"result": "WAITING"})
+   
 
 
 @app.route('/status')
