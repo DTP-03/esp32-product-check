@@ -11,7 +11,7 @@ UPLOAD_FOLDER = 'static'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 # Firebase setup
-cred = credentials.Certificate('serviceAccountKey.json')
+cred = credentials.Certificate('firebase_key.json')
 firebase_admin.initialize_app(cred, {
     'storageBucket': 'iot-esp32-a49bc.appspot.com'
 })
