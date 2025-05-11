@@ -1,67 +1,71 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8">
-  <title>ESP32 Product Check</title>
-  <style>
-    body { font-family: Arial; padding: 20px; }
-    img { max-width: 100%; height: auto; }
-    button { margin: 5px; padding: 10px 20px; }
-  </style>
+    <title>Product Inspection</title>
+    <style>
+        body { font-family: Arial; text-align: center; padding: 20px; }
+        img { max-width: 400px; border: 2px solid #000; margin: 10px; }
+        .btn-group button { padding: 10px 20px; margin: 5px; font-size: 16px; }
+        select { font-size: 16px; margin-bottom: 20px; }
+    </style>
 </head>
 <body>
-  <h1>ESP32 Product Check</h1>
+    <h1>Product Inspection</h1>
 
-  <div>
-    <label>Chế độ:</label>
-    <select id="mode-select">
-      <option value="auto">Auto</option>
-      <option value="manual">Manual</option>
+    <label for="mode">Mode:</label>
+    <select id="mode" onchange="setMode(this.value)">
+        <option value="auto">Auto</option>
+        <option value="manual">Manual</option>
     </select>
-  </div>
 
-  <div id="manual-controls" style="display: none;">
-    <button onclick="sendManualResult('OK')">Gửi OK</button>
-    <button onclick="sendManualResult('ERROR')">Gửi ERROR</button>
-  </div>
+    <p>Status: <strong id="status-text">WAITING</strong></p>
+    <img id="product-img" src="/static/latest.jpg" alt="Product Image" />
 
-  <h3>Ảnh mới nhất:</h3>
-  <img id="latest-img" src="" alt="No image yet">
+    <div class="btn-group">
+        <button onclick="submitResult('OK')">OK</button>
+        <button onclick="submitResult('ERROR')">ERROR</button>
+    </div>
 
-  <h3>Status: <span id="status">WAITING</span></h3>
+    <script>
+        async function fetchStatus() {
+            const res = await fetch("/status");
+            const data = await res.json();
+            document.getElementById("status-text").innerText = data.status;
+            document.getElementById("product-img").src = "/static/" + data.image + "?t=" + new Date().getTime();
 
-  <script>
-    let currentMode = 'auto';
+            // Disable buttons if not waiting
+            const buttons = document.querySelectorAll("button");
+            buttons.forEach(btn => {
+                btn.disabled = data.status !== "WAITING";
+            });
+        }
 
-    document.getElementById('mode-select').addEventListener('change', async (e) => {
-      currentMode = e.target.value;
-      document.getElementById('manual-controls').style.display = currentMode === 'manual' ? 'block' : 'none';
-      await fetch('/set-mode', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mode: currentMode })
-      });
-    });
+        async function setMode(newMode) {
+            await fetch("/set-mode", {
+                method: "POST",
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({mode: newMode})
+            });
+        }
 
-    async function sendManualResult(result) {
-      await fetch('/manual-result', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ result })
-      });
-    }
+        async function submitResult(result) {
+            const res = await fetch("/manual-result", {
+                method: "POST",
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({result})
+            });
 
-    async function fetchStatus() {
-      const res = await fetch('/status');
-      const data = await res.json();
-      document.getElementById('status').innerText = data.status;
-      if (data.image) {
-        document.getElementById('latest-img').src = `/static/${data.image}?t=${Date.now()}`;
-      }
-    }
+            if (res.status === 200) {
+                alert("Result submitted: " + result);
+            } else {
+                const error = await res.json();
+                alert("Error: " + error.error);
+            }
+        }
 
-    setInterval(fetchStatus, 2000);
-  </script>
-
+        // Tự động cập nhật ảnh và trạng thái mỗi 3 giây
+        setInterval(fetchStatus, 3000);
+        fetchStatus();
+    </script>
 </body>
 </html>
