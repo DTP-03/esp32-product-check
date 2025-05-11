@@ -10,6 +10,7 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 mode = "auto"
 latest_result = {"status": "WAITING", "timestamp": "", "image": ""}
+last_returned_result = {"status": "", "timestamp": "", "image": ""}
 
 
 def detect_defect(img_path):
@@ -47,28 +48,29 @@ def index():
 def upload_image():
     global latest_result
     now = datetime.now().strftime("%Y%m%d-%H%M%S")
-    filename = "latest1.jpg"
+    filename = f"{now}.jpg"
     filepath = os.path.join(UPLOAD_FOLDER, filename)
-
-    # ✅ Xóa ảnh cũ trước khi ghi ảnh mới
-    if os.path.exists(filepath):
-        os.remove(filepath)
 
     with open(filepath, 'wb') as f:
         f.write(request.data)
+        f.flush()
+        os.fsync(f.fileno())
 
     if mode == "auto":
         result = detect_defect(filepath)
         latest_result = {"status": result, "timestamp": now, "image": filename}
-
-        print(f"[{now}] Updated image: {filename}, Status: {result}")
-
+        print(f"New image: {filename}, Status: {result}")
         return jsonify({"result": result})
+
+    return jsonify({"result": "IGNORED"})
 
 
 @app.route('/status')
 def get_status():
-    return jsonify(latest_result)
+    global last_returned_result
+    if latest_result["status"] != "WAITING":
+        last_returned_result = latest_result
+    return jsonify(last_returned_result)
 
 
 @app.route('/set-mode', methods=['POST'])
@@ -89,10 +91,9 @@ def manual_result():
     return jsonify({"result": result})
 
 
-# ✅ Ngăn cache HTTP
 @app.after_request
 def add_header(response):
-    response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+    response.headers['Cache-Control'] = 'no-store'
     response.headers['Pragma'] = 'no-cache'
     response.headers['Expires'] = '0'
     return response
