@@ -58,9 +58,9 @@ def upload_image():
         result = detect_defect(filepath)
         latest_result = {"status": result, "timestamp": now, "image": filename}
         print(f"New image: {filename}, Status: {result}")
-        return jsonify({"result": result})
+        return jsonify({"result":result})
 
-    return jsonify({"result": "IGNORED"})
+    return jsonify({"result":"IGNORED"})
 
 @app.route('/status')
 def get_status():
@@ -75,12 +75,12 @@ def set_bangtai():
     data = request.get_json()
     if data and data.get("Bangtai") in ["START", "STOP"]:
         bangtai_status = data["Bangtai"]
-        return jsonify({"Bangtai": bangtai_status})
-    return jsonify({"error": "Invalid command"}), 400
+        return jsonify({"Bangtai":bangtai_status})
+    return jsonify({"error":"Invalid command"}), 400
 
 @app.route('/bangtai')
 def bangtai():
-    return jsonify({"Bangtai": bangtai_status})
+    return jsonify({"Bangtai":bangtai_status})
 
 @app.route('/manual-result', methods=['POST'])
 def manual_result():
