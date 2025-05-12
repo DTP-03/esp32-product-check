@@ -11,7 +11,7 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 mode = "auto"
 latest_result = {"status": "WAITING", "timestamp": "", "image": ""}
 last_returned_result = {"status": "", "timestamp": "", "image": ""}
-
+Bangtai = "start"
 
 def detect_defect(img_path):
     img = cv2.imread(img_path)
@@ -73,11 +73,19 @@ def get_status():
     return jsonify(last_returned_result)
 
 
-@app.route('/set-mode', methods=['POST'])
-def set_mode():
-    global mode
-    mode = request.json.get("mode")
-    return jsonify({"mode": mode})
+@app.route('/set-bangtai', methods=['POST'])
+def ():
+    global Bangtai
+    data = request.get_json()
+    if data and data.get("Bangtai") in ["start", "stop"]:
+        Bangtai = data["Bangtai"]
+        return jsonify({"Bangtai": Bangtai})
+    return jsonify({"error": "Invalid command"}), 400
+
+@app.route('/bangtai')
+def get_status():
+    return jsonify({"Bangtai": conveyor_status})
+
 
 
 @app.route('/manual-result', methods=['POST'])
