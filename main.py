@@ -77,7 +77,7 @@ def get_status():
 def set_bangtai():
     global Bangtai
     data = request.get_json()
-    if data and data.get("Bangtai") in ["start", "stop"]:
+    if data and data.get("Bangtai") in ["START", "STOP"]:
         Bangtai = data["Bangtai"]
         return jsonify({"Bangtai": Bangtai})
     return jsonify({"error": "Invalid command"}), 400
