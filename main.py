@@ -84,7 +84,7 @@ def set_bangtai():
 
 @app.route('/bangtai')
 def bangtai():
-    return jsonify({"Bangtai": conveyor_status})
+    return jsonify({"Bangtai": Bangtai})
 
 
 
