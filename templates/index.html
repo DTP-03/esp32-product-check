@@ -30,7 +30,7 @@
     </style>
 </head>
 <body>
-    <h1>Product Inspection System</h1>
+    <h1>Hệ Thống Phân Loại Sản Phẩm</h1>
     
     <!-- Hiển thị ảnh và trạng thái sản phẩm -->
     <div>
@@ -68,10 +68,22 @@
                     $('#status').text(`Status: ${data.status}`).removeClass('status-waiting status-ok status-error').addClass(`status-${data.status.toLowerCase()}`);
                     $('#timestamp').text(`Timestamp: ${data.timestamp}`);
                 });
+
+                // Cập nhật trạng thái băng tải
+                $.get('/bangtai', function(data) {
+                    if (data.Bangtai === "STOP") {
+                        $('#stop-system').hide();
+                        $('#start-system').show();
+                    } else {
+                        $('#stop-system').show();
+                        $('#start-system').hide();
+                    }
+                });
             }
 
             // Cập nhật trạng thái mỗi 5 giây
             setInterval(updateStatus, 5000);
+            updateStatus(); // Cập nhật lần đầu
 
             // Thay đổi chế độ
             $('#mode-auto').click(function() {
