@@ -130,10 +130,10 @@
             // Dừng/Khởi động hệ thống
             $('#stop-system').click(function() {
                 $.ajax({
-                    url: '/set-mode',
+                    url: '/set-bangtai',
                     method: 'POST',
                     contentType: 'application/json',
-                    data: JSON.stringify({ mode: 'WAITING' }),
+                    data: JSON.stringify({ Bangtai: 'stop' }),
                     success: function() {
                         $('#stop-system').hide();
                         $('#start-system').show();
@@ -143,10 +143,10 @@
 
             $('#start-system').click(function() {
                 $.ajax({
-                    url: '/set-mode',
+                    url: '/set-bangtai',
                     method: 'POST',
                     contentType: 'application/json',
-                    data: JSON.stringify({ mode: 'auto' }),
+                    data: JSON.stringify({ Bangtai: 'start' }),
                     success: function() {
                         $('#stop-system').show();
                         $('#start-system').hide();
