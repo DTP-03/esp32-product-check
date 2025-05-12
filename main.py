@@ -11,7 +11,7 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 mode = "auto"
 latest_result = {"status": "WAITING", "timestamp": "", "image": ""}
 last_returned_result = {"status": "", "timestamp": "", "image": ""}
-Bangtai = "start"
+bangtai_status = "START"  # Trạng thái ban đầu của băng tải
 
 def detect_defect(img_path):
     img = cv2.imread(img_path)
@@ -38,11 +38,9 @@ def detect_defect(img_path):
             return "OK"
     return "ERROR"
 
-
 @app.route('/')
 def index():
     return render_template('index.html', time=datetime.now().timestamp())
-
 
 @app.route('/upload', methods=['POST'])
 def upload_image():
@@ -64,7 +62,6 @@ def upload_image():
 
     return jsonify({"result": "IGNORED"})
 
-
 @app.route('/status')
 def get_status():
     global last_returned_result
@@ -72,21 +69,18 @@ def get_status():
         last_returned_result = latest_result
     return jsonify(last_returned_result)
 
-
 @app.route('/set-bangtai', methods=['POST'])
 def set_bangtai():
-    global Bangtai
+    global bangtai_status
     data = request.get_json()
     if data and data.get("Bangtai") in ["START", "STOP"]:
-        Bangtai = data["Bangtai"]
-        return jsonify({"Bangtai": Bangtai})
+        bangtai_status = data["Bangtai"]
+        return jsonify({"Bangtai": bangtai_status})
     return jsonify({"error": "Invalid command"}), 400
 
 @app.route('/bangtai')
 def bangtai():
-    return jsonify({"Bangtai": Bangtai})
-
-
+    return jsonify({"Bangtai": bangtai_status})
 
 @app.route('/manual-result', methods=['POST'])
 def manual_result():
@@ -98,14 +92,12 @@ def manual_result():
     latest_result["status"] = result
     return jsonify({"result": result})
 
-
 @app.after_request
 def add_header(response):
     response.headers['Cache-Control'] = 'no-store'
     response.headers['Pragma'] = 'no-cache'
     response.headers['Expires'] = '0'
     return response
-
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
