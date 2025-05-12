@@ -74,7 +74,7 @@ def get_status():
 
 
 @app.route('/set-bangtai', methods=['POST'])
-def ():
+def set_bangtai():
     global Bangtai
     data = request.get_json()
     if data and data.get("Bangtai") in ["start", "stop"]:
@@ -83,7 +83,7 @@ def ():
     return jsonify({"error": "Invalid command"}), 400
 
 @app.route('/bangtai')
-def get_status():
+def bangtai():
     return jsonify({"Bangtai": conveyor_status})
 
 
