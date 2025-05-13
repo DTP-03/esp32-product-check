@@ -1,206 +1,182 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Product Inspection</title>
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <style>
-        img {
-            width: 100%;
-            max-width: 500px;
-            height: auto;
-        }
-        .status {
-            font-size: 1.5em;
-        }
-        .status-waiting {
-            color: gray;
-        }
-        .status-ok {
-            color: green;
-        }
-        .status-error {
-            color: red;
-        }
-        .mode {
-            font-size: 1.2em;
-            font-weight: bold;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <title>ESP32 Product Checker</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      padding: 20px;
+      background-color: #f8f9fa;
+      color: #333;
+    }
+
+    h1 {
+      color: #007bff;
+    }
+
+    .status {
+      font-size: 24px;
+      margin-top: 10px;
+      font-weight: bold;
+    }
+
+    .ok { color: green; }
+    .error { color: red; }
+    .waiting { color: gray; }
+
+    .controls {
+      margin: 20px 0;
+    }
+
+    button {
+      padding: 10px 20px;
+      margin-right: 10px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+
+    #preview {
+      max-width: 400px;
+      border: 2px solid #ddd;
+      margin-top: 10px;
+    }
+
+    #history {
+      margin-top: 40px;
+    }
+
+    .image-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 10px;
+    }
+
+    .image-card {
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      padding: 5px;
+      text-align: center;
+      background: #fff;
+    }
+
+    .image-card img {
+      width: 100%;
+      height: auto;
+      border-radius: 4px;
+    }
+
+    .image-card span {
+      font-size: 14px;
+      display: block;
+      margin-top: 5px;
+    }
+  </style>
 </head>
 <body>
-    <h1>Hệ Thống Phân Loại Sản Phẩm</h1>
-    
-    <!-- Hiển thị ảnh và trạng thái sản phẩm -->
-    <div>
-        <h2>Sản Phẩm Mới Nhất</h2>
-        <img id="latest-image" src="static/latest1.jpg?t={{ time }}" alt="Latest Product Image">
-        <p id="status" class="status status-waiting">Status: WAITING</p>
-        <p id="timestamp">Timestamp: </p>
+  <h1>📦 ESP32 Product Checker</h1>
+
+  <div>
+    <p class="status">Status: <span id="status" class="waiting">WAITING</span></p>
+    <img id="preview" src="" alt="No image yet">
+  </div>
+
+  <div class="controls">
+    <button onclick="setBangtai('START')">🟢 Khởi động băng tải</button>
+    <button onclick="setBangtai('STOP')">🔴 Dừng băng tải</button>
+    <p>Trạng thái băng tải: <strong id="bt-status">Đang kiểm tra...</strong></p>
+  </div>
+
+  <div id="history">
+    <h2>Lịch sử sản phẩm</h2>
+    <div class="image-grid" id="image-grid">
+      <p>Đang tải ảnh từ Cloudinary...</p>
     </div>
+  </div>
 
-    <!-- Điều khiển hệ thống -->
-    <div>
-        <h2>Điều Khiển Hệ Thống</h2>
-        <div>
-            <label for="mode">Mode: </label>
-            <button id="mode-auto">Auto</button>
-            <button id="mode-manual">Manual</button>
-        </div>
-        <div id="manual-controls" style="display:none;">
-            <button id="result-ok">OK</button>
-            <button id="result-error">ERROR</button>
-        </div>
-        <div id="system-control">
-            <button id="stop-system">Stop System</button>
-            <button id="start-system" style="display:none;">Start System</button>
-        </div>
-    </div>
+  <script>
+    async function fetchStatus() {
+      try {
+        const res = await fetch('/status');
+        const data = await res.json();
+        const statusEl = document.getElementById('status');
+        const previewEl = document.getElementById('preview');
 
-    <!-- Danh sách ảnh đã lưu -->
-    <div>
-        <h2>Danh sách ảnh sản phẩm</h2>
-        <div id="image-list" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px;">
-            <!-- Ảnh sẽ được load từ JS -->
-        </div>
-    </div>
+        if (data.status === "OK") {
+          statusEl.textContent = "OK ✅";
+          statusEl.className = "status ok";
+        } else if (data.status === "ERROR") {
+          statusEl.textContent = "ERROR ❌";
+          statusEl.className = "status error";
+        } else {
+          statusEl.textContent = "WAITING ⏳";
+          statusEl.className = "status waiting";
+        }
 
+        if (data.image) {
+          previewEl.src = `/static/${data.image}?t=${Date.now()}`;
+        }
 
-    <script>
-        $(document).ready(function() {
-            // Tự động cập nhật ảnh và trạng thái
-            function updateStatus() {
-                $.get('/status', function(data) {
-                    const time = new Date().getTime();
-                    $('#latest-image').attr('src', `static/${data.image}?t=${time}`);
-                    $('#status').text(`Status: ${data.status}`).removeClass('status-waiting status-ok status-error').addClass(`status-${data.status.toLowerCase()}`);
-                    $('#timestamp').text(`Timestamp: ${data.timestamp}`);
-                });
+      } catch (err) {
+        console.error('Fetch status failed:', err);
+      }
+    }
 
-                
-                // Hàm hiển thị danh sách ảnh từ Cloudinary
-            function loadImageList() {
-                $.get('/images', function(data) {
-                    $('#image-list').empty();
-                    data.forEach(img => {
-                        const tag = img.tags.includes("ERROR") ? "❌ ERROR" : "✅ OK";
-                        const tagColor = img.tags.includes("ERROR") ? "red" : "green";
-                        const time = new Date(img.created_at).toLocaleString();
-            
-                        const html = `
-                            <div style="border: 1px solid #ccc; padding: 10px; border-radius: 8px;">
-                                <img src="${img.url}" alt="Product Image" style="width: 100%; border-radius: 6px;" />
-                                <p style="color: ${tagColor}; font-weight: bold; margin-top: 5px;">${tag}</p>
-                                <p style="font-size: 0.8em; color: gray;">${time}</p>
-                            </div>
-                        `;
-                        $('#image-list').append(html);
-                    });
-                });
-            }
+    async function fetchBangtaiStatus() {
+      try {
+        const res = await fetch('/bangtai');
+        const data = await res.json();
+        document.getElementById("bt-status").textContent = data.Bangtai;
+      } catch (e) {
+        document.getElementById("bt-status").textContent = "Lỗi kết nối";
+      }
+    }
 
-           
-            
-
-                // Cập nhật trạng thái băng tải
-                $.get('/bangtai', function(data) {
-                    if (data.Bangtai === "STOP") {
-                        $('#stop-system').hide();
-                        $('#start-system').show();
-                    } else {
-                        $('#stop-system').show();
-                        $('#start-system').hide();
-                    }
-                });
-            }
-
-            // Cập nhật trạng thái mỗi 5 giây
-            setInterval(updateStatus, 5000);
-            updateStatus(); // Cập nhật lần đầu
-            // Tải danh sách ảnh sau khi trang load
-            loadImageList();
-            // Thay đổi chế độ
-            $('#mode-auto').click(function() {
-                $.ajax({
-                    url: '/set-mode',
-                    method: 'POST',
-                    contentType: 'application/json',
-                    data: JSON.stringify({ mode: 'auto' }),
-                    success: function() {
-                        $('#mode-auto').prop('disabled', true);
-                        $('#mode-manual').prop('disabled', false);
-                        $('#manual-controls').hide();
-                    }
-                });
-            });
-
-            $('#mode-manual').click(function() {
-                $.ajax({
-                    url: '/set-mode',
-                    method: 'POST',
-                    contentType: 'application/json',
-                    data: JSON.stringify({ mode: 'manual' }),
-                    success: function() {
-                        $('#mode-auto').prop('disabled', false);
-                        $('#mode-manual').prop('disabled', true);
-                        $('#manual-controls').show();
-                    }
-                });
-            });
-
-            // Gửi kết quả thủ công
-            $('#result-ok').click(function() {
-                $.ajax({
-                    url: '/manual-result',
-                    method: 'POST',
-                    contentType: 'application/json',
-                    data: JSON.stringify({ result: 'OK' }),
-                    success: function() {
-                        alert('Result submitted: OK');
-                    }
-                });
-            });
-
-            $('#result-error').click(function() {
-                $.ajax({
-                    url: '/manual-result',
-                    method: 'POST',
-                    contentType: 'application/json',
-                    data: JSON.stringify({ result: 'ERROR' }),
-                    success: function() {
-                        alert('Result submitted: ERROR');
-                    }
-                });
-            });
-
-            // Dừng/Khởi động hệ thống
-            $('#stop-system').click(function() {
-                $.ajax({
-                    url: '/set-bangtai',
-                    method: 'POST',
-                    contentType: 'application/json',
-                    data: JSON.stringify({ Bangtai: 'STOP' }),
-                    success: function() {
-                        $('#stop-system').hide();
-                        $('#start-system').show();
-                    }
-                });
-            });
-
-            $('#start-system').click(function() {
-                $.ajax({
-                    url: '/set-bangtai',
-                    method: 'POST',
-                    contentType: 'application/json',
-                    data: JSON.stringify({ Bangtai: 'START' }),
-                    success: function() {
-                        $('#stop-system').show();
-                        $('#start-system').hide();
-                    }
-                });
-            });
+    async function setBangtai(status) {
+      try {
+        const res = await fetch('/set-bangtai', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ Bangtai: status })
         });
-    </script>
+        const data = await res.json();
+        fetchBangtaiStatus();
+      } catch (err) {
+        alert("Lỗi gửi lệnh băng tải");
+      }
+    }
+
+    async function fetchImages() {
+      try {
+        const res = await fetch('/images');
+        const images = await res.json();
+        const grid = document.getElementById('image-grid');
+        grid.innerHTML = "";
+
+        images.forEach(img => {
+          const div = document.createElement('div');
+          div.className = "image-card";
+          div.innerHTML = `
+            <img src="${img.url}" alt="product">
+            <span>${img.tags.includes('OK') ? '✅ OK' : '❌ ERROR'}</span>
+            <span>${new Date(img.created_at).toLocaleString()}</span>
+          `;
+          grid.appendChild(div);
+        });
+      } catch (err) {
+        document.getElementById('image-grid').innerHTML = "Không thể tải ảnh.";
+        console.error(err);
+      }
+    }
+
+    // Cập nhật mỗi 3 giây
+    setInterval(fetchStatus, 3000);
+    setInterval(fetchBangtaiStatus, 5000);
+
+    // Khởi tạo
+    fetchStatus();
+    fetchBangtaiStatus();
+    fetchImages();
+  </script>
 </body>
 </html>
