@@ -5,18 +5,22 @@ import cv2
 import numpy as np
 import cloudinary
 import cloudinary.uploader
+from flask_cors import CORS
 
+# Cấu hình Cloudinary từ biến môi trường (bảo mật hơn)
 cloudinary.config(
-  cloud_name='dlwozbaha',
-  api_key='756293496318513',
-  api_secret='P9PEye3ou-GEO8WJCSIAYqm5Rfo'
+    cloud_name=os.getenv("CLOUDINARY_CLOUD_NAME", "dlwozbaha"),
+    api_key=os.getenv("CLOUDINARY_API_KEY", "756293496318513"),
+    api_secret=os.getenv("CLOUDINARY_API_SECRET", "P9PEye3ou-GEO8WJCSIAYqm5Rfo")
 )
 
 app = Flask(__name__)
+CORS(app)
+
 UPLOAD_FOLDER = 'static'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-mode = "auto"
+mode = "auto"  # auto or manual
 latest_result = {"status": "WAITING", "timestamp": "", "image": ""}
 last_returned_result = {"status": "", "timestamp": "", "image": ""}
 bangtai_status = "START"
@@ -27,13 +31,13 @@ def detect_defect(img_path):
 
     lower_red1 = np.array([0, 120, 70])
     upper_red1 = np.array([10, 255, 255])
-    mask1 = cv2.inRange(hsv, lower_red1, upper_red1)
-
     lower_red2 = np.array([170, 120, 70])
     upper_red2 = np.array([180, 255, 255])
-    mask2 = cv2.inRange(hsv, lower_red2, upper_red2)
 
+    mask1 = cv2.inRange(hsv, lower_red1, upper_red1)
+    mask2 = cv2.inRange(hsv, lower_red2, upper_red2)
     mask = cv2.bitwise_or(mask1, mask2)
+
     red_area = cv2.bitwise_and(img, img, mask=mask)
     gray = cv2.cvtColor(red_area, cv2.COLOR_BGR2GRAY)
     edges = cv2.Canny(gray, 100, 200)
@@ -62,13 +66,7 @@ def upload_image():
         f.flush()
         os.fsync(f.fileno())
 
-    if mode == "auto":
-        result = detect_defect(filepath)
-    elif mode == "manual":
-        result = latest_result.get("status", "ERROR")
-    else:
-        return jsonify({"result": "IGNORED"})
-
+    result = detect_defect(filepath) if mode == "auto" else latest_result.get("status", "ERROR")
     latest_result = {"status": result, "timestamp": now, "image": filename}
 
     try:
@@ -81,7 +79,6 @@ def upload_image():
     except Exception as e:
         print(f"Cloudinary upload failed: {e}")
 
-    print(f"New image: {filename}, Status: {result}")
     return jsonify({"result": result})
 
 @app.route('/manual-result', methods=['POST'])
@@ -122,13 +119,11 @@ def get_images():
             max_results=50,
             direction="desc"
         )
-        images = []
-        for item in response.get("resources", []):
-            images.append({
-                "url": item["secure_url"],
-                "tags": item.get("tags", []),
-                "created_at": item["created_at"]
-            })
+        images = [{
+            "url": item["secure_url"],
+            "tags": item.get("tags", []),
+            "created_at": item["created_at"]
+        } for item in response.get("resources", [])]
         return jsonify(images)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
