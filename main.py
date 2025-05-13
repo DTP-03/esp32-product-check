@@ -68,7 +68,7 @@ def upload_image():
     if mode == "auto":
         result = detect_defect(filepath) 
     else : 
-        latest_result.get("status", "ERROR")
+        latest_result.get("status", "OK")
     latest_result = {"status": result, "timestamp": now, "image": filename}
 
     try:
