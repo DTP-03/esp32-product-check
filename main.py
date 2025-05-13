@@ -65,8 +65,10 @@ def upload_image():
         f.write(request.data)
         f.flush()
         os.fsync(f.fileno())
-
-    result = detect_defect(filepath) if mode == "auto" else latest_result.get("status", "ERROR")
+    if mode == "auto":
+        result = detect_defect(filepath) 
+    else : 
+        latest_result.get("status", "ERROR")
     latest_result = {"status": result, "timestamp": now, "image": filename}
 
     try:
