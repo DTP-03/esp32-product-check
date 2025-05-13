@@ -3,6 +3,15 @@ from datetime import datetime
 import os
 import cv2
 import numpy as np
+import cloudinary
+import cloudinary.uploader
+
+cloudinary.config(
+  cloud_name='dlwozbaha',
+  api_key='756293496318513',
+  api_secret='P9PEye3ou-GEO8WJCSIAYqm5Rfo'
+)
+
 
 app = Flask(__name__)
 UPLOAD_FOLDER = 'static'
@@ -42,6 +51,7 @@ def detect_defect(img_path):
 def index():
     return render_template('index.html', time=datetime.now().timestamp())
 
+
 @app.route('/upload', methods=['POST'])
 def upload_image():
     global latest_result
@@ -49,18 +59,33 @@ def upload_image():
     filename = f"{now}.jpg"
     filepath = os.path.join(UPLOAD_FOLDER, filename)
 
+    # Lưu ảnh tạm vào local
     with open(filepath, 'wb') as f:
         f.write(request.data)
         f.flush()
         os.fsync(f.fileno())
 
+    # Nếu ở chế độ tự động → nhận diện
     if mode == "auto":
-        result = detect_defect(filepath)
+        result = detect_defect(filepath)  # Kết quả: OK hoặc ERROR
         latest_result = {"status": result, "timestamp": now, "image": filename}
-        print(f"New image: {filename}, Status: {result}")
-        return jsonify({"result":result})
 
-    return jsonify({"result":"IGNORED"})
+        # Upload lên Cloudinary với tag là OK hoặc ERROR
+        try:
+            upload_result = cloudinary.uploader.upload(
+                filepath,
+                public_id=f"product_{now}",
+                tags=[result]
+            )
+            print(f"Uploaded to Cloudinary: {upload_result.get('secure_url')}")
+        except Exception as e:
+            print(f"Cloudinary upload failed: {e}")
+
+        print(f"New image: {filename}, Status: {result}")
+        return jsonify({"result": result})
+
+    return jsonify({"result": "IGNORED"})
+
 
 @app.route('/status')
 def get_status():
