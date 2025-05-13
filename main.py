@@ -12,7 +12,6 @@ cloudinary.config(
   api_secret='P9PEye3ou-GEO8WJCSIAYqm5Rfo'
 )
 
-
 app = Flask(__name__)
 UPLOAD_FOLDER = 'static'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
@@ -20,7 +19,7 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 mode = "auto"
 latest_result = {"status": "WAITING", "timestamp": "", "image": ""}
 last_returned_result = {"status": "", "timestamp": "", "image": ""}
-bangtai_status = "START"  # Trạng thái ban đầu của băng tải
+bangtai_status = "START"
 
 def detect_defect(img_path):
     img = cv2.imread(img_path)
@@ -51,7 +50,6 @@ def detect_defect(img_path):
 def index():
     return render_template('index.html', time=datetime.now().timestamp())
 
-
 @app.route('/upload', methods=['POST'])
 def upload_image():
     global latest_result
@@ -59,47 +57,41 @@ def upload_image():
     filename = f"{now}.jpg"
     filepath = os.path.join(UPLOAD_FOLDER, filename)
 
-    # Lưu ảnh tạm vào local
     with open(filepath, 'wb') as f:
         f.write(request.data)
         f.flush()
         os.fsync(f.fileno())
 
-    # Nếu ở chế độ tự động → nhận diện
     if mode == "auto":
-        result = detect_defect(filepath)  # Kết quả: OK hoặc ERROR
-        latest_result = {"status": result, "timestamp": now, "image": filename}
+        result = detect_defect(filepath)
+    elif mode == "manual":
+        result = latest_result.get("status", "ERROR")
+    else:
+        return jsonify({"result": "IGNORED"})
 
-        # Upload lên Cloudinary với tag là OK hoặc ERROR
-        try:
-            upload_result = cloudinary.uploader.upload(
-                filepath,
-                public_id=f"product_{now}",
-                tags=[result]
-            )
-            print(f"Uploaded to Cloudinary: {upload_result.get('secure_url')}")
-        except Exception as e:
-            print(f"Cloudinary upload failed: {e}")
+    latest_result = {"status": result, "timestamp": now, "image": filename}
 
-        print(f"New image: {filename}, Status: {result}")
-        return jsonify({"result": result})
-    if mode =="manual":
-      result = manual_result()
-      latest_result = {"status": result, "timestamp": now, "image": filename}
-      try:
-            upload_result = cloudinary.uploader.upload(
-                filepath,
-                public_id=f"product_{now}",
-                tags=[result]
-            )
-            print(f"Uploaded to Cloudinary: {upload_result.get('secure_url')}")
-      except Exception as e:
-            print(f"Cloudinary upload failed: {e}")
+    try:
+        upload_result = cloudinary.uploader.upload(
+            filepath,
+            public_id=f"product_{now}",
+            tags=[result]
+        )
+        print(f"Uploaded to Cloudinary: {upload_result.get('secure_url')}")
+    except Exception as e:
+        print(f"Cloudinary upload failed: {e}")
 
-        print(f"New image: {filename}, Status: {result}")
-        return jsonify({"result": result})
-    return jsonify({"result": "IGNORED"})
+    print(f"New image: {filename}, Status: {result}")
+    return jsonify({"result": result})
 
+@app.route('/manual-result', methods=['POST'])
+def manual_result():
+    global latest_result
+    result = request.json.get("result")
+    if result in ["OK", "ERROR"]:
+        latest_result["status"] = result
+        return jsonify({"status": result})
+    return jsonify({"error": "Invalid result"}), 400
 
 @app.route('/status')
 def get_status():
@@ -114,31 +106,22 @@ def set_bangtai():
     data = request.get_json()
     if data and data.get("Bangtai") in ["START", "STOP"]:
         bangtai_status = data["Bangtai"]
-        return jsonify({"Bangtai":bangtai_status})
-    return jsonify({"error":"Invalid command"}), 400
+        return jsonify({"Bangtai": bangtai_status})
+    return jsonify({"error": "Invalid command"}), 400
 
 @app.route('/bangtai')
 def bangtai():
-    return jsonify({"Bangtai":bangtai_status})
-
-@app.route('/manual-result', methods=['POST'])
-def manual_result():
-    global latest_result
-    result = request.json.get("result")
-    latest_result["status"] = result
-    return result
+    return jsonify({"Bangtai": bangtai_status})
 
 @app.route("/images", methods=["GET"])
 def get_images():
     try:
-        # Lấy tối đa 50 ảnh đã được upload gần đây nhất
         response = cloudinary.api.resources(
             type="upload",
             prefix="product_",
             max_results=50,
             direction="desc"
         )
-
         images = []
         for item in response.get("resources", []):
             images.append({
@@ -146,7 +129,6 @@ def get_images():
                 "tags": item.get("tags", []),
                 "created_at": item["created_at"]
             })
-
         return jsonify(images)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
