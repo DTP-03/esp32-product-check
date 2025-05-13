@@ -93,7 +93,7 @@ def upload_image():
                 tags=[result]
             )
             print(f"Uploaded to Cloudinary: {upload_result.get('secure_url')}")
-        except Exception as e:
+      except Exception as e:
             print(f"Cloudinary upload failed: {e}")
 
         print(f"New image: {filename}, Status: {result}")
