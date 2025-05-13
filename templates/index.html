@@ -34,7 +34,7 @@
     
     <!-- Hiển thị ảnh và trạng thái sản phẩm -->
     <div>
-        <h2>Latest Image</h2>
+        <h2>Sản Phẩm Mới Nhất</h2>
         <img id="latest-image" src="static/latest1.jpg?t={{ time }}" alt="Latest Product Image">
         <p id="status" class="status status-waiting">Status: WAITING</p>
         <p id="timestamp">Timestamp: </p>
@@ -42,7 +42,7 @@
 
     <!-- Điều khiển hệ thống -->
     <div>
-        <h2>System Controls</h2>
+        <h2>Điều Khiển Hệ Thống</h2>
         <div>
             <label for="mode">Mode: </label>
             <button id="mode-auto">Auto</button>
@@ -58,6 +58,15 @@
         </div>
     </div>
 
+    <!-- Danh sách ảnh đã lưu -->
+    <div>
+        <h2>Danh sách ảnh sản phẩm</h2>
+        <div id="image-list" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px;">
+            <!-- Ảnh sẽ được load từ JS -->
+        </div>
+    </div>
+
+
     <script>
         $(document).ready(function() {
             // Tự động cập nhật ảnh và trạng thái
@@ -68,6 +77,31 @@
                     $('#status').text(`Status: ${data.status}`).removeClass('status-waiting status-ok status-error').addClass(`status-${data.status.toLowerCase()}`);
                     $('#timestamp').text(`Timestamp: ${data.timestamp}`);
                 });
+
+                
+                // Hàm hiển thị danh sách ảnh từ Cloudinary
+            function loadImageList() {
+                $.get('/images', function(data) {
+                    $('#image-list').empty();
+                    data.forEach(img => {
+                        const tag = img.tags.includes("ERROR") ? "❌ ERROR" : "✅ OK";
+                        const tagColor = img.tags.includes("ERROR") ? "red" : "green";
+                        const time = new Date(img.created_at).toLocaleString();
+            
+                        const html = `
+                            <div style="border: 1px solid #ccc; padding: 10px; border-radius: 8px;">
+                                <img src="${img.url}" alt="Product Image" style="width: 100%; border-radius: 6px;" />
+                                <p style="color: ${tagColor}; font-weight: bold; margin-top: 5px;">${tag}</p>
+                                <p style="font-size: 0.8em; color: gray;">${time}</p>
+                            </div>
+                        `;
+                        $('#image-list').append(html);
+                    });
+                });
+            }
+
+           
+            
 
                 // Cập nhật trạng thái băng tải
                 $.get('/bangtai', function(data) {
@@ -84,7 +118,8 @@
             // Cập nhật trạng thái mỗi 5 giây
             setInterval(updateStatus, 5000);
             updateStatus(); // Cập nhật lần đầu
-
+            // Tải danh sách ảnh sau khi trang load
+            loadImageList();
             // Thay đổi chế độ
             $('#mode-auto').click(function() {
                 $.ajax({
