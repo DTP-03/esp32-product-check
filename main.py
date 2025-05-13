@@ -83,7 +83,21 @@ def upload_image():
 
         print(f"New image: {filename}, Status: {result}")
         return jsonify({"result": result})
+    if mode =="manual":
+      result = manual_result()
+      latest_result = {"status": result, "timestamp": now, "image": filename}
+      try:
+            upload_result = cloudinary.uploader.upload(
+                filepath,
+                public_id=f"product_{now}",
+                tags=[result]
+            )
+            print(f"Uploaded to Cloudinary: {upload_result.get('secure_url')}")
+        except Exception as e:
+            print(f"Cloudinary upload failed: {e}")
 
+        print(f"New image: {filename}, Status: {result}")
+        return jsonify({"result": result})
     return jsonify({"result": "IGNORED"})
 
 
@@ -110,12 +124,32 @@ def bangtai():
 @app.route('/manual-result', methods=['POST'])
 def manual_result():
     global latest_result
-    if latest_result["status"] != "WAITING":
-        return jsonify({"error": "Đã được đánh giá trước đó."}), 400
-
     result = request.json.get("result")
     latest_result["status"] = result
-    return jsonify({"result": result})
+    return result
+
+@app.route("/images", methods=["GET"])
+def get_images():
+    try:
+        # Lấy tối đa 50 ảnh đã được upload gần đây nhất
+        response = cloudinary.api.resources(
+            type="upload",
+            prefix="product_",
+            max_results=50,
+            direction="desc"
+        )
+
+        images = []
+        for item in response.get("resources", []):
+            images.append({
+                "url": item["secure_url"],
+                "tags": item.get("tags", []),
+                "created_at": item["created_at"]
+            })
+
+        return jsonify(images)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 @app.after_request
 def add_header(response):
