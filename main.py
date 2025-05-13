@@ -130,7 +130,7 @@ def get_images():
             type="upload",
             prefix="product_",
             max_results=50,
-            direction="desc"
+            
         )
         images = [{
             "url": item["secure_url"],
