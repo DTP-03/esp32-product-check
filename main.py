@@ -1,5 +1,6 @@
 from flask import Flask, request, render_template, jsonify
 from datetime import datetime
+import pytz
 import os
 import cv2
 import numpy as np
@@ -25,11 +26,13 @@ latest_result = {"status": "WAITING", "timestamp": "", "image": ""}
 last_returned_result = {"status": "", "timestamp": "", "image": ""}
 bangtai_status = "START"
 
+# Múi giờ Việt Nam
+VN_TZ = pytz.timezone("Asia/Ho_Chi_Minh")
+
 def detect_defect(img_path):
     img = cv2.imread(img_path)
     hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
 
-    # Tăng dải màu đỏ để bắt được nhiều sắc độ đỏ hơn
     lower_red1 = np.array([0, 100, 50])
     upper_red1 = np.array([10, 255, 255])
     lower_red2 = np.array([160, 100, 50])
@@ -39,7 +42,6 @@ def detect_defect(img_path):
     mask2 = cv2.inRange(hsv, lower_red2, upper_red2)
     mask = cv2.bitwise_or(mask1, mask2)
 
-    # Làm sạch noise nhỏ trong mask
     kernel = np.ones((5, 5), np.uint8)
     mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
     mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
@@ -47,28 +49,28 @@ def detect_defect(img_path):
     red_area = cv2.bitwise_and(img, img, mask=mask)
     gray = cv2.cvtColor(red_area, cv2.COLOR_BGR2GRAY)
     blurred = cv2.GaussianBlur(gray, (5, 5), 0)
-    edges = cv2.Canny(blurred, 50, 150)  # nhạy hơn
+    edges = cv2.Canny(blurred, 50, 150)
 
     contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
     for contour in contours:
         area = cv2.contourArea(contour)
-        if area > 800:  # hạ ngưỡng diện tích xuống để bắt lỗi nhỏ hơn
+        if area > 800:
             approx = cv2.approxPolyDP(contour, 0.03 * cv2.arcLength(contour, True), True)
-            if len(approx) >= 4:  # Không cần chính xác là 4 cạnh
+            if len(approx) >= 4:
                 return "OK"
 
     return "ERROR"
 
-
 @app.route('/')
 def index():
-    return render_template('index.html', time=datetime.now().timestamp())
+    return render_template('index.html', time=datetime.now(VN_TZ).timestamp())
 
 @app.route('/upload', methods=['POST'])
 def upload_image():
     global latest_result
-    now = datetime.now().strftime("%Y%m%d-%H%M%S")
+
+    now = datetime.now(VN_TZ).strftime("%Y%m%d-%H%M%S")
     filename = f"{now}.jpg"
     filepath = os.path.join(UPLOAD_FOLDER, filename)
 
@@ -76,10 +78,12 @@ def upload_image():
         f.write(request.data)
         f.flush()
         os.fsync(f.fileno())
+
     if mode == "auto":
-        result = detect_defect(filepath) 
-    else : 
-        latest_result.get("status", "OK")
+        result = detect_defect(filepath)
+    else:
+        result = latest_result.get("status", "OK")
+
     latest_result = {"status": result, "timestamp": now, "image": filename}
 
     try:
@@ -130,7 +134,6 @@ def get_images():
             type="upload",
             prefix="product_",
             max_results=50,
-            
         )
         images = [{
             "url": item["secure_url"],
