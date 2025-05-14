@@ -3,5 +3,5 @@ opencv-python
 numpy
 cloudinary
 flask-cors
-
+pytz
 
