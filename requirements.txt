@@ -4,4 +4,6 @@ numpy
 cloudinary
 flask-cors
 pytz
+Flask-SQLAlchemy
+psycopg2-binary
 
