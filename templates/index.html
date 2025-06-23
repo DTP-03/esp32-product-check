@@ -6,94 +6,174 @@
   <style>
     body {
       font-family: 'Segoe UI', sans-serif;
-      padding: 20px;
+      margin: 0;
+      padding: 0;
       background-color: #f8f9fa;
       color: #333;
     }
 
+    .container {
+      display: flex;
+      flex-wrap: wrap;
+      max-width: 1200px;
+      margin: 40px auto;
+      background: #fff;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+      overflow: hidden;
+    }
+
+    .sidebar {
+      flex: 1 1 320px;
+      min-width: 300px;
+      background: #f1f3f6;
+      padding: 32px 24px;
+      border-right: 1px solid #e0e0e0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .main {
+      flex: 2 1 500px;
+      min-width: 350px;
+      padding: 32px 32px 32px 32px;
+    }
+
     h1 {
       color: #007bff;
+      margin-bottom: 32px;
+      text-align: center;
+      font-size: 2rem;
     }
 
     .status {
       font-size: 24px;
       margin-top: 10px;
       font-weight: bold;
+      margin-bottom: 16px;
     }
 
     .ok { color: green; }
     .error { color: red; }
     .waiting { color: gray; }
 
-    .controls {
-      margin: 20px 0;
+    #preview {
+      max-width: 100%;
+      width: 320px;
+      border: 2px solid #ddd;
+      margin: 16px 0 24px 0;
+      border-radius: 8px;
+      background: #fff;
+      min-height: 180px;
+      object-fit: contain;
     }
 
-    button {
-      padding: 10px 20px;
-      margin-right: 10px;
+    .controls {
+      width: 100%;
+      margin: 0 0 24px 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .controls button {
+      padding: 10px 24px;
+      margin: 0 8px 12px 0;
       font-size: 16px;
       cursor: pointer;
+      border: none;
+      border-radius: 5px;
+      background: #007bff;
+      color: #fff;
+      transition: background 0.2s;
+    }
+    .controls button:last-child {
+      background: #dc3545;
+    }
+    .controls button:hover {
+      opacity: 0.9;
     }
 
-    #preview {
-      max-width: 400px;
-      border: 2px solid #ddd;
-      margin-top: 10px;
+    .controls p {
+      margin: 0;
+      font-size: 16px;
     }
 
-    #history {
-      margin-top: 40px;
+    .main h2 {
+      margin-top: 0;
+      color: #333;
+      font-size: 1.3rem;
+      margin-bottom: 18px;
     }
 
     .image-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-      gap: 10px;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 16px;
     }
 
     .image-card {
       border: 1px solid #ccc;
-      border-radius: 5px;
-      padding: 5px;
+      border-radius: 8px;
+      padding: 8px;
       text-align: center;
       background: #fff;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.03);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
     }
 
     .image-card img {
       width: 100%;
-      height: auto;
+      height: 120px;
+      object-fit: cover;
       border-radius: 4px;
+      background: #f8f9fa;
     }
 
     .image-card span {
       font-size: 14px;
       display: block;
-      margin-top: 5px;
+      margin-top: 6px;
+    }
+
+    @media (max-width: 900px) {
+      .container {
+        flex-direction: column;
+      }
+      .sidebar, .main {
+        border-right: none;
+        border-bottom: 1px solid #e0e0e0;
+        min-width: 0;
+        padding: 24px 12px;
+      }
+      .main {
+        border-bottom: none;
+      }
     }
   </style>
 </head>
 <body>
-  <h1>Hệ Thống Nhận Diện Sản Phẩm Lỗi </h1>
-
-  <div>
-    <p class="status">Status: <span id="status" class="waiting">WAITING</span></p>
-    <img id="preview" src="" alt="No image yet">
-  </div>
-
-  <div class="controls">
-    <button onclick="setBangtai('START')">🟢 Khởi động băng tải</button>
-    <button onclick="setBangtai('STOP')">🔴 Dừng băng tải</button>
-    <p>Trạng thái băng tải: <strong id="bt-status">Đang kiểm tra...</strong></p>
-  </div>
-
-  <div id="history">
-    <h2>Lịch sử sản phẩm</h2>
-    <div class="image-grid" id="image-grid">
-      <p>Đang tải ảnh từ Cloudinary...</p>
+  <div class="container">
+    <div class="sidebar">
+      <h1>Hệ Thống Nhận Diện Sản Phẩm Lỗi</h1>
+      <p class="status">Status: <span id="status" class="waiting">WAITING</span></p>
+      <img id="preview" src="" alt="No image yet">
+      <div class="controls">
+        <button onclick="setBangtai('START')">🟢 Khởi động băng tải</button>
+        <button onclick="setBangtai('STOP')">🔴 Dừng băng tải</button>
+        <p>Trạng thái băng tải: <strong id="bt-status">Đang kiểm tra...</strong></p>
+      </div>
+    </div>
+    <div class="main">
+      <h2>Lịch sử sản phẩm</h2>
+      <div class="image-grid" id="image-grid">
+        <p>Đang tải ảnh từ Cloudinary...</p>
+      </div>
     </div>
   </div>
-
   <script>
     async function fetchStatus() {
       try {
@@ -169,7 +249,6 @@
       }
     }
 
-    
     setInterval(fetchStatus, 3000);
     setInterval(fetchBangtaiStatus, 5000);
 
