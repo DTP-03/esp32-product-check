@@ -1,156 +1,95 @@
-from flask import Flask, request, render_template, jsonify
+from flask import Flask, request, render_template, jsonify, Response
+from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 import pytz
 import os
 import cv2
 import numpy as np
-import cloudinary
-import cloudinary.uploader
-from flask_cors import CORS
-
-# Cấu hình Cloudinary từ biến môi trường (bảo mật hơn)
-cloudinary.config(
-    cloud_name=os.getenv("CLOUDINARY_CLOUD_NAME", "dlwozbaha"),
-    api_key=os.getenv("CLOUDINARY_API_KEY", "756293496318513"),
-    api_secret=os.getenv("CLOUDINARY_API_SECRET", "P9PEye3ou-GEO8WJCSIAYqm5Rfo")
-)
 
 app = Flask(__name__)
-CORS(app)
 
+# --- Cấu hình DB PostgreSQL qua biến môi trường ---
+db_url = os.getenv("DATABASE_URL", "")
+if db_url.startswith("postgres://"):
+    db_url = db_url.replace("postgres://", "postgresql://", 1)
+app.config["SQLALCHEMY_DATABASE_URI"] = db_url
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+db = SQLAlchemy(app)
+
+# --- Model sản phẩm ---
+class Product(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    filename = db.Column(db.String(256))
+    content = db.Column(db.LargeBinary)
+    status = db.Column(db.String(10))
+    created_at = db.Column(db.DateTime)
+
+# --- Trạng thái hiện tại và múi giờ VN ---
+mode = "auto"
+latest_result = {"status": "WAITING", "timestamp": "", "image_id": None}
+VN_TZ = pytz.timezone("Asia/Ho_Chi_Minh")
 UPLOAD_FOLDER = 'static'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-mode = "auto"  # auto or manual
-latest_result = {"status": "WAITING", "timestamp": "", "image": ""}
-last_returned_result = {"status": "", "timestamp": "", "image": ""}
-bangtai_status = "START"
-
-# Múi giờ Việt Nam
-VN_TZ = pytz.timezone("Asia/Ho_Chi_Minh")
-
+# --- Hàm phát hiện lỗi ---
 def detect_defect(img_path):
     img = cv2.imread(img_path)
     hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
-
-    lower_red1 = np.array([0, 100, 50])
-    upper_red1 = np.array([10, 255, 255])
-    lower_red2 = np.array([160, 100, 50])
-    upper_red2 = np.array([180, 255, 255])
-
-    mask1 = cv2.inRange(hsv, lower_red1, upper_red1)
-    mask2 = cv2.inRange(hsv, lower_red2, upper_red2)
-    mask = cv2.bitwise_or(mask1, mask2)
-
-    kernel = np.ones((5, 5), np.uint8)
+    lower1, upper1 = np.array([0,100,50]), np.array([10,255,255])
+    lower2, upper2 = np.array([160,100,50]), np.array([180,255,255])
+    mask = cv2.bitwise_or(cv2.inRange(hsv, lower1, upper1),
+                          cv2.inRange(hsv, lower2, upper2))
+    kernel = np.ones((5,5), np.uint8)
     mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
     mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
-
-    red_area = cv2.bitwise_and(img, img, mask=mask)
-    gray = cv2.cvtColor(red_area, cv2.COLOR_BGR2GRAY)
-    blurred = cv2.GaussianBlur(gray, (5, 5), 0)
-    edges = cv2.Canny(blurred, 50, 150)
-
+    gray = cv2.cvtColor(cv2.bitwise_and(img, img, mask=mask), cv2.COLOR_BGR2GRAY)
+    edges = cv2.Canny(cv2.GaussianBlur(gray,(5,5),0), 50, 150)
     contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-
-    for contour in contours:
-        area = cv2.contourArea(contour)
-        if area > 800:
-            approx = cv2.approxPolyDP(contour, 0.03 * cv2.arcLength(contour, True), True)
-            if len(approx) >= 4:
-                return "OK"
-
+    for c in contours:
+        if cv2.contourArea(c)>800 and len(cv2.approxPolyDP(c, 0.03*cv2.arcLength(c, True), True))>=4:
+            return "OK"
     return "ERROR"
 
+# --- Routes ---
 @app.route('/')
 def index():
-    return render_template('index.html', time=datetime.now(VN_TZ).timestamp())
+    return render_template('index.html')
 
 @app.route('/upload', methods=['POST'])
 def upload_image():
-    global latest_result
-
-    now = datetime.now(VN_TZ).strftime("%Y%m%d-%H%M%S")
-    filename = f"{now}.jpg"
+    now = datetime.now(VN_TZ)
+    timestamp = now.strftime("%Y%m%d-%H%M%S")
+    filename = f"{timestamp}.jpg"
     filepath = os.path.join(UPLOAD_FOLDER, filename)
-
     with open(filepath, 'wb') as f:
         f.write(request.data)
-        f.flush()
-        os.fsync(f.fileno())
-
-    if mode == "auto":
-        result = detect_defect(filepath)
-    else:
-        result = latest_result.get("status", "OK")
-
-    latest_result = {"status": result, "timestamp": now, "image": filename}
-
-    try:
-        upload_result = cloudinary.uploader.upload(
-            filepath,
-            public_id=f"product_{now}",
-            tags=[result]
-        )
-        print(f"Uploaded to Cloudinary: {upload_result.get('secure_url')}")
-    except Exception as e:
-        print(f"Cloudinary upload failed: {e}")
-
+    result = detect_defect(filepath) if mode == "auto" else latest_result["status"]
+    prod = Product(filename=filename,
+                   content=open(filepath, 'rb').read(),
+                   status=result,
+                   created_at=now)
+    db.session.add(prod)
+    db.session.commit()
+    latest_result.update({"status": result, "timestamp": timestamp, "image_id": prod.id})
     return jsonify({"result": result})
 
-@app.route('/manual-result', methods=['POST'])
-def manual_result():
-    global latest_result
-    result = request.json.get("result")
-    if result in ["OK", "ERROR"]:
-        latest_result["status"] = result
-        return jsonify({"status": result})
-    return jsonify({"error": "Invalid result"}), 400
+@app.route('/product/<int:id>/image')
+def product_image(id):
+    prod = Product.query.get_or_404(id)
+    return Response(prod.content, mimetype='image/jpeg')
 
 @app.route('/status')
 def get_status():
-    global last_returned_result
-    if latest_result["status"] != "WAITING":
-        last_returned_result = latest_result
-    return jsonify(last_returned_result)
+    return jsonify(latest_result)
 
-@app.route('/set-bangtai', methods=['POST'])
-def set_bangtai():
-    global bangtai_status
-    data = request.get_json()
-    if data and data.get("Bangtai") in ["START", "STOP"]:
-        bangtai_status = data["Bangtai"]
-        return jsonify({"Bangtai": bangtai_status})
-    return jsonify({"error": "Invalid command"}), 400
+@app.route('/stats')
+def stats():
+    total = Product.query.count()
+    ok = Product.query.filter_by(status="OK").count()
+    err = Product.query.filter_by(status="ERROR").count()
+    return jsonify({"total": total, "ok": ok, "error": err})
 
-@app.route('/bangtai')
-def bangtai():
-    return jsonify({"Bangtai": bangtai_status})
-
-@app.route("/images", methods=["GET"])
-def get_images():
-    try:
-        response = cloudinary.api.resources(
-            type="upload",
-            prefix="product_",
-            max_results=50,
-        )
-        images = [{
-            "url": item["secure_url"],
-            "tags": item.get("tags", []),
-            "created_at": item["created_at"]
-        } for item in response.get("resources", [])]
-        return jsonify(images)
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-@app.after_request
-def add_header(response):
-    response.headers['Cache-Control'] = 'no-store'
-    response.headers['Pragma'] = 'no-cache'
-    response.headers['Expires'] = '0'
-    return response
-
+# --- Run ---
 if __name__ == '__main__':
-    port = int(os.environ.get("PORT", 5000))
-    app.run(debug=True, host="0.0.0.0", port=port)
+    db.create_all()
+    app.run(debug=True)
