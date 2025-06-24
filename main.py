@@ -157,8 +157,10 @@ def add_header(response):
 
 @app.route('/counts')
 def get_counts():
-    # Replace with your actual logic
-    return jsonify(total_count= total_count, OK_count= OK_count)
+    return jsonify({
+        "total": total_count,
+        "ok": ok_count
+    })
 
 
 if __name__ == '__main__':
