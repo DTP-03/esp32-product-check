@@ -25,8 +25,7 @@ mode = "auto"  # auto or manual
 latest_result = {"status": "WAITING", "timestamp": "", "image": ""}
 last_returned_result = {"status": "", "timestamp": "", "image": ""}
 bangtai_status = "START"
-total_count = 0; # tổng sản phảm
-OK_count = 0; # số sản phẩm OK
+
 # Múi giờ Việt Nam
 VN_TZ = pytz.timezone("Asia/Ho_Chi_Minh")
 
@@ -65,7 +64,7 @@ def index():
 
 @app.route('/upload', methods=['POST'])
 def upload_image():
-    global latest_result
+    global latest_result, total_count, OK_count
 
     now = datetime.now(VN_TZ).strftime("%Y%m%d-%H%M%S")
     filename = f"{now}.jpg"
