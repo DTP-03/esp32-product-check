@@ -25,7 +25,8 @@ mode = "auto"  # auto or manual
 latest_result = {"status": "WAITING", "timestamp": "", "image": ""}
 last_returned_result = {"status": "", "timestamp": "", "image": ""}
 bangtai_status = "START"
-
+total_count = 0
+OK_count = 0
 # Múi giờ Việt Nam
 VN_TZ = pytz.timezone("Asia/Ho_Chi_Minh")
 
