@@ -155,6 +155,12 @@ def add_header(response):
     response.headers['Expires'] = '0'
     return response
 
+@app.route('/counts')
+def get_counts():
+    # Replace with your actual logic
+    return jsonify(total_count= total_count, OK_count= OK_count)
+
+
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
     app.run(debug=True, host="0.0.0.0", port=port)
