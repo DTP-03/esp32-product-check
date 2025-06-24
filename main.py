@@ -33,14 +33,10 @@ def detect_defect(img_path):
     img = cv2.imread(img_path)
     hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
 
-    lower_red1 = np.array([0, 100, 50])
-    upper_red1 = np.array([10, 255, 255])
-    lower_red2 = np.array([160, 100, 50])
-    upper_red2 = np.array([180, 255, 255])
+    lower_yellow = np.array([15, 100, 100])
+    upper_yellow = np.array([35, 255, 255])
 
-    mask1 = cv2.inRange(hsv, lower_red1, upper_red1)
-    mask2 = cv2.inRange(hsv, lower_red2, upper_red2)
-    mask = cv2.bitwise_or(mask1, mask2)
+    mask = cv2.inRange(hsv, lower_yellow, upper_yellow)
 
     kernel = np.ones((5, 5), np.uint8)
     mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
@@ -57,7 +53,7 @@ def detect_defect(img_path):
         area = cv2.contourArea(contour)
         if area > 800:
             approx = cv2.approxPolyDP(contour, 0.03 * cv2.arcLength(contour, True), True)
-            if len(approx) >= 4:
+            if len(approx) >= 8:
                 return "OK"
 
     return "ERROR"
