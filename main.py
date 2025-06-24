@@ -25,7 +25,8 @@ mode = "auto"  # auto or manual
 latest_result = {"status": "WAITING", "timestamp": "", "image": ""}
 last_returned_result = {"status": "", "timestamp": "", "image": ""}
 bangtai_status = "START"
-
+total_count = 0; # tổng sản phảm
+OK_count = 0; # số sản phẩm OK
 # Múi giờ Việt Nam
 VN_TZ = pytz.timezone("Asia/Ho_Chi_Minh")
 
@@ -79,7 +80,12 @@ def upload_image():
         result = detect_defect(filepath)
     else:
         result = latest_result.get("status", "OK")
-
+        
+      # cộng số lượng các sản phẩm  
+    total_count = total_count +1;
+    if result == "OK":
+        OK_count = OK_count +1;
+    
     latest_result = {"status": result, "timestamp": now, "image": filename}
 
     try:
@@ -93,6 +99,8 @@ def upload_image():
         print(f"Cloudinary upload failed: {e}")
 
     return jsonify({"result": result})
+
+
 
 @app.route('/manual-result', methods=['POST'])
 def manual_result():
