@@ -165,6 +165,8 @@
         <button onclick="setBangtai('START')">🟢 Khởi động băng tải</button>
         <button onclick="setBangtai('STOP')">🔴 Dừng băng tải</button>
         <p>Trạng thái băng tải: <strong id="bt-status">Đang kiểm tra...</strong></p>
+        <p><strong>Tổng sản phẩm:</strong> <span id="total-count">0</span></p>
+        <p><strong>Sản phẩm đạt:</strong> <span id="ok-count">0</span></p>
       </div>
     </div>
     <div class="main">
@@ -175,87 +177,101 @@
     </div>
   </div>
   <script>
-    async function fetchStatus() {
-      try {
-        const res = await fetch('/status');
-        const data = await res.json();
-        const statusEl = document.getElementById('status');
-        const previewEl = document.getElementById('preview');
+      async function fetchStatus() {
+          try {
+              const res = await fetch('/status');
+              const data = await res.json();
+              const statusEl = document.getElementById('status');
+              const previewEl = document.getElementById('preview');
 
-        if (data.status === "OK") {
-          statusEl.textContent = "OK ✅";
-          statusEl.className = "status ok";
-        } else if (data.status === "ERROR") {
-          statusEl.textContent = "ERROR ❌";
-          statusEl.className = "status error";
-        } else {
-          statusEl.textContent = "WAITING ⏳";
-          statusEl.className = "status waiting";
-        }
+              if (data.status === "OK") {
+                  statusEl.textContent = "OK ✅";
+                  statusEl.className = "status ok";
+              } else if (data.status === "ERROR") {
+                  statusEl.textContent = "ERROR ❌";
+                  statusEl.className = "status error";
+              } else {
+                  statusEl.textContent = "WAITING ⏳";
+                  statusEl.className = "status waiting";
+              }
 
-        if (data.image) {
-          previewEl.src = `/static/${data.image}?t=${Date.now()}`;
-        }
+              if (data.image) {
+                  previewEl.src = `/static/${data.image}?t=${Date.now()}`;
+              }
 
-      } catch (err) {
-        console.error('Fetch status failed:', err);
+          } catch (err) {
+              console.error('Fetch status failed:', err);
+          }
       }
-    }
 
-    async function fetchBangtaiStatus() {
-      try {
-        const res = await fetch('/bangtai');
-        const data = await res.json();
-        document.getElementById("bt-status").textContent = data.Bangtai;
-      } catch (e) {
-        document.getElementById("bt-status").textContent = "Lỗi kết nối";
+      async function fetchBangtaiStatus() {
+          try {
+              const res = await fetch('/bangtai');
+              const data = await res.json();
+              document.getElementById("bt-status").textContent = data.Bangtai;
+          } catch (e) {
+              document.getElementById("bt-status").textContent = "Lỗi kết nối";
+          }
       }
-    }
 
-    async function setBangtai(status) {
-      try {
-        const res = await fetch('/set-bangtai', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ Bangtai: status })
-        });
-        const data = await res.json();
-        fetchBangtaiStatus();
-      } catch (err) {
-        alert("Lỗi gửi lệnh băng tải");
+      async function setBangtai(status) {
+          try {
+              const res = await fetch('/set-bangtai', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ Bangtai: status })
+              });
+              const data = await res.json();
+              fetchBangtaiStatus();
+          } catch (err) {
+              alert("Lỗi gửi lệnh băng tải");
+          }
       }
-    }
 
-    async function fetchImages() {
-      try {
-        const res = await fetch('/images');
-        const images = await res.json();
-        const grid = document.getElementById('image-grid');
-        grid.innerHTML = "";
+      async function fetchImages() {
+          try {
+              const res = await fetch('/images');
+              const images = await res.json();
+              const grid = document.getElementById('image-grid');
+              grid.innerHTML = "";
 
-        images.forEach(img => {
-          const div = document.createElement('div');
-          div.className = "image-card";
-          div.innerHTML = `
+              images.forEach(img => {
+                  const div = document.createElement('div');
+                  div.className = "image-card";
+                  div.innerHTML = `
             <img src="${img.url}" alt="product">
             <span>${img.tags.includes('OK') ? '✅ OK' : '❌ ERROR'}</span>
             <span>${new Date(img.created_at).toLocaleString()}</span>
           `;
-          grid.appendChild(div);
-        });
-      } catch (err) {
-        document.getElementById('image-grid').innerHTML = "Không thể tải ảnh.";
-        console.error(err);
+                  grid.appendChild(div);
+              });
+          } catch (err) {
+              document.getElementById('image-grid').innerHTML = "Không thể tải ảnh.";
+              console.error(err);
+          }
       }
-    }
 
-    setInterval(fetchStatus, 3000);
-    setInterval(fetchBangtaiStatus, 5000);
+      async function fetchCounts() {
+          try {
+              const res = await fetch('/counts');
+              const data = await res.json();
+              document.getElementById('total-count').textContent = data.total;
+              document.getElementById('ok-count').textContent = data.ok;
+          } catch (err) {
+              console.error("Lỗi lấy dữ liệu đếm:", err);
+          }
+      }
 
-    // Khởi tạo
-    fetchStatus();
-    fetchBangtaiStatus();
-    fetchImages();
+      setInterval(fetchCounts, 1000);
+      fetchCounts();
+
+      setInterval(fetchStatus, 3000);
+      setInterval(fetchBangtaiStatus, 5000);
+
+      // Khởi tạo
+      fetchStatus();
+      fetchBangtaiStatus();
+      fetchImages();
   </script>
 </body>
 </html>
