@@ -82,9 +82,9 @@ def upload_image():
         result = latest_result.get("status", "OK")
         
       # cộng số lượng các sản phẩm  
-    total_count = total_count +1;
+    total_count +=1;
     if result == "OK":
-        OK_count = OK_count +1;
+        OK_count +=1;
     
     latest_result = {"status": result, "timestamp": now, "image": filename}
 
@@ -159,7 +159,7 @@ def add_header(response):
 def get_counts():
     return jsonify({
         "total": total_count,
-        "ok": ok_count
+        "ok": OK_count,
     })
 
 
