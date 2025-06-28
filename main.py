@@ -4,16 +4,10 @@ import pytz
 import os
 import cv2
 import numpy as np
-import cloudinary
-import cloudinary.uploader
+import pandas as pd
 from flask_cors import CORS
 
-# Cấu hình Cloudinary từ biến môi trường (bảo mật hơn)
-cloudinary.config(
-    cloud_name=os.getenv("CLOUDINARY_CLOUD_NAME", "dlwozbaha"),
-    api_key=os.getenv("CLOUDINARY_API_KEY", "756293496318513"),
-    api_secret=os.getenv("CLOUDINARY_API_SECRET", "P9PEye3ou-GEO8WJCSIAYqm5Rfo")
-)
+EXCEL_PATH = os.path.join(os.getcwd(), "product_log.xlsx")
 
 app = Flask(__name__)
 CORS(app)
@@ -93,15 +87,19 @@ def upload_image():
     
     latest_result = {"status": result, "timestamp": now, "image": filename}
 
-    try:
-        upload_result = cloudinary.uploader.upload(
-            filepath,
-            public_id=f"product_{now}",
-            tags=[result]
-        )
-        print(f"Uploaded to Cloudinary: {upload_result.get('secure_url')}")
-    except Exception as e:
-        print(f"Cloudinary upload failed: {e}")
+    # Lưu vào Excel
+    new_row = pd.DataFrame([{
+        "timestamp": now,
+        "status": result,
+        "image": filename
+    }])
+
+    if not os.path.exists(EXCEL_PATH):
+        new_row.to_excel(EXCEL_PATH, index=False)
+    else:
+        existing = pd.read_excel(EXCEL_PATH)
+        updated = pd.concat([existing, new_row], ignore_index=True)
+        updated.to_excel(EXCEL_PATH, index=False)
 
     return jsonify({"result": result})
 
@@ -136,22 +134,25 @@ def set_bangtai():
 def bangtai():
     return jsonify({"Bangtai": bangtai_status})
 
+
 @app.route("/images", methods=["GET"])
 def get_images():
     try:
-        response = cloudinary.api.resources(
-            type="upload",
-            prefix="product_",
-            max_results=50,
-        )
-        images = [{
-            "url": item["secure_url"],
-            "tags": item.get("tags", []),
-            "created_at": item["created_at"]
-        } for item in response.get("resources", [])]
+        if not os.path.exists(EXCEL_PATH):
+            return jsonify([])
+
+        df = pd.read_excel(EXCEL_PATH)
+        images = []
+        for _, row in df.iterrows():
+            images.append({
+                "url": f"/static/{row['image']}",
+                "tags": [row['status']],
+                "created_at": datetime.strptime(str(row['timestamp']), "%Y%m%d-%H%M%S").isoformat()
+            })
         return jsonify(images)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
 
 @app.after_request
 def add_header(response):
