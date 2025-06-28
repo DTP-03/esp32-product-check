@@ -1,9 +1,9 @@
 Flask==2.2.5
 opencv-python
 numpy
-cloudinary
 flask-cors
 pytz
-Flask-SQLAlchemy
-psycopg2-binary
+pandas
+openpyxl
+
 
