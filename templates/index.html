@@ -153,6 +153,24 @@
         border-bottom: none;
       }
     }
+
+    #product-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+    
+    #product-table th, #product-table td {
+      border: 1px solid #ccc;
+      padding: 8px;
+      text-align: center;
+    }
+    
+    #product-table img {
+      max-width: 100px;
+      height: auto;
+      border-radius: 4px;
+    }
   </style>
 </head>
 <body>
@@ -171,9 +189,20 @@
     </div>
     <div class="main">
       <h2>Lịch sử sản phẩm</h2>
-      <div class="image-grid" id="image-grid">
-        <p>Đang tải ảnh từ Cloudinary...</p>
-      </div>
+        <div id="product-table-container">
+          <table id="product-table">
+            <thead>
+              <tr>
+                <th>Ảnh</th>
+                <th>Trạng thái</th>
+                <th>Thời gian</th>
+              </tr>
+            </thead>
+            <tbody id="product-table-body">
+              <tr><td colspan="3">Đang tải dữ liệu...</td></tr>
+            </tbody>
+          </table>
+        </div>
     </div>
   </div>
   <script>
@@ -229,27 +258,42 @@
       }
 
       async function fetchImages() {
-          try {
-              const res = await fetch('/images');
-              const images = await res.json();
-              const grid = document.getElementById('image-grid');
-              grid.innerHTML = "";
-
-              images.forEach(img => {
-                  const div = document.createElement('div');
-                  div.className = "image-card";
-                  div.innerHTML = `
-            <img src="${img.url}" alt="product">
-            <span>${img.tags.includes('OK') ? '✅ OK' : '❌ ERROR'}</span>
-            <span>${new Date(img.created_at).toLocaleString()}</span>
-          `;
-                  grid.appendChild(div);
-              });
-          } catch (err) {
-              document.getElementById('image-grid').innerHTML = "Không thể tải ảnh.";
-              console.error(err);
-          }
-      }
+        try {
+            const res = await fetch('/images');
+            const images = await res.json();
+            const tbody = document.getElementById('product-table-body');
+            tbody.innerHTML = "";
+    
+            if (images.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="3">Chưa có sản phẩm nào.</td></tr>';
+                return;
+            }
+    
+            images.forEach(img => {
+                const row = document.createElement('tr');
+    
+                const imgTd = document.createElement('td');
+                imgTd.innerHTML = `<img src="${img.url}" alt="product">`;
+    
+                const statusTd = document.createElement('td');
+                statusTd.textContent = img.tags.includes("OK") ? "✅ OK" : "❌ ERROR";
+    
+                const timeTd = document.createElement('td');
+                const date = new Date(img.created_at);
+                timeTd.textContent = date.toLocaleString("vi-VN");
+    
+                row.appendChild(imgTd);
+                row.appendChild(statusTd);
+                row.appendChild(timeTd);
+    
+                tbody.appendChild(row);
+            });
+        } catch (err) {
+            const tbody = document.getElementById('product-table-body');
+            tbody.innerHTML = '<tr><td colspan="3">Không thể tải dữ liệu.</td></tr>';
+            console.error(err);
+        }
+    }
 
       async function fetchCounts() {
           try {
@@ -261,13 +305,12 @@
               console.error("Lỗi lấy dữ liệu đếm:", err);
           }
       }
-
+    
+      document.addEventListener("DOMContentLoaded", fetchImages);
       setInterval(fetchCounts, 1000);
       fetchCounts();
-
       setInterval(fetchStatus, 3000);
       setInterval(fetchBangtaiStatus, 5000);
-
       // Khởi tạo
       fetchStatus();
       fetchBangtaiStatus();
