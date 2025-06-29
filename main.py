@@ -60,7 +60,7 @@ def detect_defect(img_path):
     contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     for contour in contours:
         area = cv2.contourArea(contour)
-        if area > 800:
+        if area > 400:
             approx = cv2.approxPolyDP(contour, 0.03 * cv2.arcLength(contour, True), True)
             if len(approx) >= 8:
                 return "OK"
