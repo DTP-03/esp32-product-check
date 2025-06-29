@@ -258,7 +258,7 @@
           }
       }
 
-      let lastImageCount = 0;
+      let lastImageIds = [];  // So sánh bằng ID hoặc timestamp để kiểm tra có thay đổi
 
       async function fetchImages() {
           const tbody = document.getElementById('product-table-body');
@@ -271,19 +271,26 @@
                   throw new Error("Dữ liệu trả về không hợp lệ");
               }
       
-              if (images.length === lastImageCount) {
-                  return; // Không có dữ liệu mới -> không cập nhật
-              }
+              // Sắp xếp từ mới đến cũ (timestamp giảm dần)
+              const latestImages = images
+                  .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+                  .slice(0, 6);
       
-              lastImageCount = images.length;
+              // So sánh timestamp để biết có thay đổi không
+              const currentIds = latestImages.map(img => img.created_at);
+              if (JSON.stringify(currentIds) === JSON.stringify(lastImageIds)) {
+                  return; // Không có ảnh mới
+              }
+              lastImageIds = currentIds;
+      
               tbody.innerHTML = "";
       
-              if (images.length === 0) {
+              if (latestImages.length === 0) {
                   tbody.innerHTML = '<tr><td colspan="3">Chưa có sản phẩm nào.</td></tr>';
                   return;
               }
       
-              images.forEach(img => {
+              latestImages.forEach(img => {
                   const row = document.createElement('tr');
       
                   // Ảnh
