@@ -96,6 +96,7 @@ def upload_image():
         ws = wb.active
         ws.title = "Products"
         ws.append(["Timestamp", "Status", "Image"])  # Header
+        wb.save(EXCEL_PATH)
     else:
         wb = load_workbook(EXCEL_PATH)
         ws = wb.active
