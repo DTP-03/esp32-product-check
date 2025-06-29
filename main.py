@@ -1,4 +1,5 @@
 from flask import Flask, request, render_template, jsonify
+from flask import send_file
 from datetime import datetime
 import pytz
 import os
@@ -6,6 +7,7 @@ import cv2
 import numpy as np
 import pandas as pd
 from flask_cors import CORS
+
 
 EXCEL_PATH = os.path.join(os.getcwd(), "product_log.xlsx")
 
@@ -167,7 +169,12 @@ def get_counts():
         "total": total_count,
         "ok": OK_count,
     })
-
+    
+@app.route('/export-excel')
+def export_excel():
+    if os.path.exists(EXCEL_PATH):
+        return send_file(EXCEL_PATH, as_attachment=True)
+    return jsonify({"error": "Excel file not found"}), 404
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
