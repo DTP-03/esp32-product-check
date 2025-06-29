@@ -34,13 +34,13 @@ def detect_defect(img_path):
     #bright = cv2.convertScaleAbs(img, alpha=1.3, beta=40)  # alpha > 1: tăng tương phản, beta > 0: tăng sáng
 
     # === Chuyển sang HSV để lọc màu vàng ===
-    #hsv = cv2.cvtColor(bright, cv2.COLOR_BGR2HSV)
+    hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
     
 
     lower_yellow = np.array([10, 70, 70])
     upper_yellow = np.array([40, 255, 255])
 
-    mask = cv2.inRange(img, lower_yellow, upper_yellow)
+    mask = cv2.inRange(hsv, lower_yellow, upper_yellow)
 
     kernel = np.ones((5, 5), np.uint8)
     mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
