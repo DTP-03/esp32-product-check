@@ -185,6 +185,7 @@
         <p>Trạng thái băng tải: <strong id="bt-status">Đang kiểm tra...</strong></p>
         <p><strong>Tổng sản phẩm:</strong> <span id="total-count">0</span></p>
         <p><strong>Sản phẩm đạt:</strong> <span id="ok-count">0</span></p>
+        <button onclick="downloadExcel()">📁 Tải Excel</button>
       </div>
     </div>
     <div class="main">
@@ -305,6 +306,10 @@
               console.error("Lỗi lấy dữ liệu đếm:", err);
           }
       }
+
+    function downloadExcel() {
+        window.location.href = "/export-excel";
+    }
     
       document.addEventListener("DOMContentLoaded", fetchImages);
       setInterval(fetchCounts, 1000);
