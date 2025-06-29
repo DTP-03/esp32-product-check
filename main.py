@@ -103,19 +103,22 @@ def upload_image():
     ws = wb.active
     
     row = ws.max_row + 1
+    # Ghi dữ liệu
     ws.cell(row=row, column=1, value=now)
     ws.cell(row=row, column=2, value=result)
+    ws.cell(row=row, column=3, value=filename)  # GHI TÊN FILE vào ô C để dùng sau
     
-    try:
-        PILImage.open(filepath).verify()
-        img = XLImage(filepath)
-        img.width = 100
-        img.height = 100
-        img.anchor = f"C{row}"
-        ws.add_image(img)
-    except Exception as e:
-        print(f"Lỗi khi chèn ảnh vào Excel: {e}")
+    # Chèn ảnh vào vị trí C (vẫn là ô C nhưng ảnh đè lên)
+    img = XLImage(filepath)
+    img.width = 100
+    img.height = 100
+    img.anchor = f"D{row}"
+    ws.add_image(img)
     
+    # Điều chỉnh kích thước
+    ws.row_dimensions[row].height = 80
+    ws.column_dimensions["D"].width = 18
+
     wb.save(EXCEL_PATH)
     print(f"Đã ghi sản phẩm {result} với ảnh {filename} vào Excel.")
 
