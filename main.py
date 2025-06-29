@@ -89,19 +89,30 @@ def upload_image():
     
     latest_result = {"status": result, "timestamp": now, "image": filename}
 
-    # Lưu vào Excel
-    new_row = pd.DataFrame([{
-        "timestamp": now,
-        "status": result,
-        "image": filename
-    }])
-
+    # === Ghi vào Excel với ảnh ===
     if not os.path.exists(EXCEL_PATH):
-        new_row.to_excel(EXCEL_PATH, index=False)
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Products"
+        ws.append(["Timestamp", "Status", "Image"])  # Header
     else:
-        existing = pd.read_excel(EXCEL_PATH)
-        updated = pd.concat([existing, new_row], ignore_index=True)
-        updated.to_excel(EXCEL_PATH, index=False)
+        wb = load_workbook(EXCEL_PATH)
+        ws = wb.active
+
+    # Dòng mới
+    row = ws.max_row + 1
+    ws.cell(row=row, column=1, value=now)
+    ws.cell(row=row, column=2, value=result)
+
+    # Chèn ảnh thật
+    img = XLImage(filepath)
+    img.width = 100  # Tùy chỉnh kích thước ảnh trong Excel
+    img.height = 100
+    img.anchor = f"C{row}"  # Cột C
+
+    ws.add_image(img)
+
+    wb.save(EXCEL_PATH)
 
     return jsonify({"result": result})
 
