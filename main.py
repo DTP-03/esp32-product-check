@@ -7,7 +7,8 @@ import cv2
 import numpy as np
 import pandas as pd
 from flask_cors import CORS
-
+from openpyxl import Workbook, load_workbook
+from openpyxl.drawing.image import Image as XLImage
 
 EXCEL_PATH = os.path.join(os.getcwd(), "product_log.xlsx")
 
