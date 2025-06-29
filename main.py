@@ -163,9 +163,9 @@ def get_images():
         images = []
         for _, row in df.iterrows():
             images.append({
-                "url": f"/static/{row['image']}",
-                "tags": [row['status']],
-                "created_at": datetime.strptime(str(row['timestamp']), "%Y%m%d-%H%M%S").isoformat()
+                "url": f"/static/{row['Image']}",
+                "tags": [row['Status']],
+                "created_at": datetime.strptime(str(row['Iimestamp']), "%Y%m%d-%H%M%S").isoformat()
             })
         return jsonify(images)
     except Exception as e:
