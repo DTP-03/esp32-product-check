@@ -36,25 +36,30 @@ def detect_defect(img_path):
     # === Chuyển sang HSV để lọc màu vàng ===
     hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
     
-    lower1 = np.array([10, 70, 70])
-    upper1 = np.array([25, 255, 255])
-   
-    lower2 = np.array([25, 100, 100])
-    upper2 = np.array([35, 255, 255])
-    
-    lower3 = np.array([35, 100, 100])
-    upper3 = np.array([45, 255, 255])
-    
-    mask= cv2.inRange(hsv, lower1, upper1) | cv2.inRange(hsv, lower2, upper2) | cv2.inRange(hsv, lower3, upper3)
-    output_frame = cv2.bitwise_not(mask)
-    edge = cv2.Canny( output_frame, 50 ,150)
+
+    lower_yellow = np.array([10, 70, 70])
+    upper_yellow = np.array([40, 255, 255])
+
+    mask = cv2.inRange(hsv, lower_yellow, upper_yellow)
+
+    kernel = np.ones((5, 5), np.uint8)
+    mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
+    mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
+
+    red_area = cv2.bitwise_and(img, img, mask=mask)
+    gray = cv2.cvtColor(red_area, cv2.COLOR_BGR2GRAY)
+    blurred = cv2.GaussianBlur(gray, (5, 5), 0)
+    edges = cv2.Canny(blurred, 50, 150)
+
     contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
     for contour in contours:
         area = cv2.contourArea(contour)
         if area > 800:
             approx = cv2.approxPolyDP(contour, 0.03 * cv2.arcLength(contour, True), True)
             if len(approx) >= 8:
                 return "OK"
+
     return "ERROR"
 
 @app.route('/')
