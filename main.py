@@ -117,7 +117,7 @@ def upload_image():
         print(f"Lỗi khi chèn ảnh vào Excel: {e}")
     
     wb.save(EXCEL_PATH)
-print(f"Đã ghi sản phẩm {result} với ảnh {filename} vào Excel.")
+    print(f"Đã ghi sản phẩm {result} với ảnh {filename} vào Excel.")
 
     return jsonify({"result": result})
 
