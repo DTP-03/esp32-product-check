@@ -9,6 +9,7 @@ import pandas as pd
 from flask_cors import CORS
 from openpyxl import Workbook, load_workbook
 from openpyxl.drawing.image import Image as XLImage
+from PIL import Image as PILImage  # pip install pillow
 
 EXCEL_PATH = os.path.join(os.getcwd(), "product_log.xlsx")
 
@@ -97,24 +98,26 @@ def upload_image():
         ws.title = "Products"
         ws.append(["Timestamp", "Status", "Image"])  # Header
         wb.save(EXCEL_PATH)
-    else:
-        wb = load_workbook(EXCEL_PATH)
-        ws = wb.active
-
-    # Dòng mới
+    
+    wb = load_workbook(EXCEL_PATH)
+    ws = wb.active
+    
     row = ws.max_row + 1
     ws.cell(row=row, column=1, value=now)
     ws.cell(row=row, column=2, value=result)
-
-    # Chèn ảnh thật
-    img = XLImage(filepath)
-    img.width = 100  # Tùy chỉnh kích thước ảnh trong Excel
-    img.height = 100
-    img.anchor = f"C{row}"  # Cột C
-
-    ws.add_image(img)
-
+    
+    try:
+        PILImage.open(filepath).verify()
+        img = XLImage(filepath)
+        img.width = 100
+        img.height = 100
+        img.anchor = f"C{row}"
+        ws.add_image(img)
+    except Exception as e:
+        print(f"Lỗi khi chèn ảnh vào Excel: {e}")
+    
     wb.save(EXCEL_PATH)
+print(f"Đã ghi sản phẩm {result} với ảnh {filename} vào Excel.")
 
     return jsonify({"result": result})
 
