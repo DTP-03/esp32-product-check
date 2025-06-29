@@ -258,43 +258,63 @@
           }
       }
 
+      let lastImageCount = 0;
+
       async function fetchImages() {
-        try {
-            const res = await fetch('/images');
-            const images = await res.json();
-            const tbody = document.getElementById('product-table-body');
-            tbody.innerHTML = "";
-    
-            if (images.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="3">Chưa có sản phẩm nào.</td></tr>';
-                return;
-            }
-    
-            images.forEach(img => {
-                const row = document.createElement('tr');
-    
-                const imgTd = document.createElement('td');
-                imgTd.innerHTML = `<img src="${img.url}" alt="product">`;
-    
-                const statusTd = document.createElement('td');
-                statusTd.textContent = img.tags.includes("OK") ? "✅ OK" : "❌ ERROR";
-    
-                const timeTd = document.createElement('td');
-                const date = new Date(img.created_at);
-                timeTd.textContent = date.toLocaleString("vi-VN");
-    
-                row.appendChild(imgTd);
-                row.appendChild(statusTd);
-                row.appendChild(timeTd);
-    
-                tbody.appendChild(row);
-            });
-        } catch (err) {
-            const tbody = document.getElementById('product-table-body');
-            tbody.innerHTML = '<tr><td colspan="3">Không thể tải dữ liệu.</td></tr>';
-            console.error(err);
-        }
-    }
+          const tbody = document.getElementById('product-table-body');
+      
+          try {
+              const res = await fetch('/images');
+              const images = await res.json();
+      
+              if (!Array.isArray(images)) {
+                  throw new Error("Dữ liệu trả về không hợp lệ");
+              }
+      
+              if (images.length === lastImageCount) {
+                  return; // Không có dữ liệu mới -> không cập nhật
+              }
+      
+              lastImageCount = images.length;
+              tbody.innerHTML = "";
+      
+              if (images.length === 0) {
+                  tbody.innerHTML = '<tr><td colspan="3">Chưa có sản phẩm nào.</td></tr>';
+                  return;
+              }
+      
+              images.forEach(img => {
+                  const row = document.createElement('tr');
+      
+                  // Ảnh
+                  const imgTd = document.createElement('td');
+                  imgTd.innerHTML = `<img src="${img.url}" alt="product" height="80">`;
+      
+                  // Trạng thái
+                  const statusTd = document.createElement('td');
+                  statusTd.textContent = img.tags.includes("OK") ? "✅ OK" : "❌ ERROR";
+      
+                  // Thời gian
+                  const timeTd = document.createElement('td');
+                  const date = new Date(img.created_at);
+                  timeTd.textContent = date.toLocaleString("vi-VN");
+      
+                  // Gắn vào hàng
+                  row.appendChild(imgTd);
+                  row.appendChild(statusTd);
+                  row.appendChild(timeTd);
+      
+                  tbody.appendChild(row);
+              });
+      
+          } catch (err) {
+              console.error("Lỗi khi tải dữ liệu:", err);
+              tbody.innerHTML = '<tr><td colspan="3">Không thể tải dữ liệu.</td></tr>';
+          }
+      }
+
+
+
 
       async function fetchCounts() {
           try {
@@ -313,14 +333,16 @@
     
       document.addEventListener("DOMContentLoaded", fetchImages);
       setInterval(fetchCounts, 1000);
-      fetchCounts();
+      
       setInterval(fetchStatus, 3000);
       setInterval(fetchBangtaiStatus, 5000);
+     // Gọi lần đầu và cập nhật mỗi 1 giâ
       setInterval(fetchImages, 1000);
       // Khởi tạo
       fetchStatus();
       fetchBangtaiStatus();
       fetchImages();
+      fetchCounts();
   </script>
 </body>
 </html>
