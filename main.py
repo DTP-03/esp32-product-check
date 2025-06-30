@@ -28,37 +28,40 @@ OK_count = 0
 # Múi giờ Việt Nam
 VN_TZ = pytz.timezone("Asia/Ho_Chi_Minh")
 
-
 def detect_defect(img_path):
     img = cv2.imread(img_path)
     hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
-    hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
 
-    # Vùng đỏ đầu trục (0-10)
+    # Ngưỡng màu đỏ
     lower_red1 = np.array([0, 100, 100])
     upper_red1 = np.array([10, 255, 255])
-    
-    # Vùng đỏ cuối trục (160-179)
     lower_red2 = np.array([160, 100, 100])
     upper_red2 = np.array([179, 255, 255])
-    
-    # Tạo 2 mask và gộp lại
+
+    # Tạo mask màu đỏ
     mask1 = cv2.inRange(hsv, lower_red1, upper_red1)
     mask2 = cv2.inRange(hsv, lower_red2, upper_red2)
     mask_red = cv2.bitwise_or(mask1, mask2)
-    
-    red_area = cv2.bitwise_and(img, img, mask_red)
-    gray = cv2.cvtColor(red_area, cv2.COLOR_BGR2GRAY)
-    blurred = cv2.GaussianBlur(gray, (5, 5), 0)
-    edges = cv2.Canny(blurred, 50, 150)
-    contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    for contour in contours:
-        area = cv2.contourArea(contour)
-        if area > 400:
-            approx = cv2.approxPolyDP(contour, 0.03 * cv2.arcLength(contour, True), True)
-            if len(approx) >= 8:
-                return "OK"
-    return "ERROR"
+
+    # Làm mượt mask để tránh nhiễu
+    blurred = cv2.GaussianBlur(mask_red, (9, 9), 2)
+
+    # Phát hiện hình tròn trong vùng đỏ
+    circles = cv2.HoughCircles(
+        blurred, 
+        cv2.HOUGH_GRADIENT, 
+        dp=1.2, 
+        minDist=30,
+        param1=100,
+        param2=30,  # càng thấp thì càng dễ phát hiện (nhiễu)
+        minRadius=10, 
+        maxRadius=150
+    )
+
+    if circles is not None:
+        return "OK"  # có hình tròn màu đỏ
+    else:
+        return "ERROR"
 
 @app.route('/')
 def index():
