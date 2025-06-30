@@ -46,7 +46,6 @@ def detect_defect(img_path):
     mask1 = cv2.inRange(hsv, lower_red1, upper_red1)
     mask2 = cv2.inRange(hsv, lower_red2, upper_red2)
     mask_red = cv2.bitwise_or(mask1, mask2)
-        )
     
     red_area = cv2.bitwise_and(img, img, mask_red)
     gray = cv2.cvtColor(red_area, cv2.COLOR_BGR2GRAY)
