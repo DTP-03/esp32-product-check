@@ -28,35 +28,26 @@ OK_count = 0
 # Múi giờ Việt Nam
 VN_TZ = pytz.timezone("Asia/Ho_Chi_Minh")
 
+
 def detect_defect(img_path):
-    # 1. Đọc ảnh và chuyển sang HSV
     img = cv2.imread(img_path)
-    hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV) 
-    # 2. Khai báo các dải màu vàng khác nhau
+    hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
     lower1 = np.array([10, 70, 70])
     upper1 = np.array([25, 255, 255])
     lower2 = np.array([25, 100, 100])  # vàng đậm
     upper2 = np.array([35, 255, 255])
     lower3 = np.array([35, 100, 100])  # cam-vàng
     upper3 = np.array([45, 255, 255])
-    
     mask_yellow = (
         cv2.inRange(hsv, lower1, upper1) |
         cv2.inRange(hsv, lower2, upper2) |
         cv2.inRange(hsv, lower3, upper3)
     )
-    # 4. Làm sạch mask bằng các phép toán morphology
-    kernel = np.ones((5, 5), np.uint8)
-    mask_clean = cv2.morphologyEx(mask_yellow, cv2.MORPH_CLOSE, kernel)
-    mask_clean = cv2.morphologyEx(mask_clean, cv2.MORPH_OPEN, kernel)
-    # 5. Áp mask để lấy vùng màu vàng trong ảnh gốc
-    yellow_area = cv2.bitwise_and(img, img, mask=mask_clean)
-    # 6. Chuyển sang ảnh xám và làm mượt
+    mask_smooth = cv2.GaussianBlur(mask_yellow, (7, 7), 0)
+    yellow_area = cv2.bitwise_and(img, img, mask=mask_smooth)
     gray = cv2.cvtColor(yellow_area, cv2.COLOR_BGR2GRAY)
     blurred = cv2.GaussianBlur(gray, (5, 5), 0)
-    # 7. Phát hiện biên bằng Canny
     edges = cv2.Canny(blurred, 50, 150)
-    # 8. Tìm contours từ cạnh
     contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     for contour in contours:
         area = cv2.contourArea(contour)
@@ -64,7 +55,6 @@ def detect_defect(img_path):
             approx = cv2.approxPolyDP(contour, 0.03 * cv2.arcLength(contour, True), True)
             if len(approx) >= 8:
                 return "OK"
-
     return "ERROR"
 
 @app.route('/')
