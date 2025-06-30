@@ -32,20 +32,24 @@ VN_TZ = pytz.timezone("Asia/Ho_Chi_Minh")
 def detect_defect(img_path):
     img = cv2.imread(img_path)
     hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
-    lower1 = np.array([10, 70, 70])
-    upper1 = np.array([25, 255, 255])
-    lower2 = np.array([25, 100, 100])  # vàng đậm
-    upper2 = np.array([35, 255, 255])
-    lower3 = np.array([35, 100, 100])  # cam-vàng
-    upper3 = np.array([45, 255, 255])
-    mask_yellow = (
-        cv2.inRange(hsv, lower1, upper1) |
-        cv2.inRange(hsv, lower2, upper2) |
-        cv2.inRange(hsv, lower3, upper3)
-    )
-    mask_smooth = cv2.GaussianBlur(mask_yellow, (7, 7), 0)
-    yellow_area = cv2.bitwise_and(img, img, mask=mask_smooth)
-    gray = cv2.cvtColor(yellow_area, cv2.COLOR_BGR2GRAY)
+    hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+
+    # Vùng đỏ đầu trục (0-10)
+    lower_red1 = np.array([0, 100, 100])
+    upper_red1 = np.array([10, 255, 255])
+    
+    # Vùng đỏ cuối trục (160-179)
+    lower_red2 = np.array([160, 100, 100])
+    upper_red2 = np.array([179, 255, 255])
+    
+    # Tạo 2 mask và gộp lại
+    mask1 = cv2.inRange(hsv, lower_red1, upper_red1)
+    mask2 = cv2.inRange(hsv, lower_red2, upper_red2)
+    mask_red = cv2.bitwise_or(mask1, mask2)
+        )
+    mask_smooth = cv2.GaussianBlur(mask_red, (7, 7), 0)
+    red_area = cv2.bitwise_and(img, img, mask=mask_smooth)
+    gray = cv2.cvtColor(red_area, cv2.COLOR_BGR2GRAY)
     blurred = cv2.GaussianBlur(gray, (5, 5), 0)
     edges = cv2.Canny(blurred, 50, 150)
     contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
