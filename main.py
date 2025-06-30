@@ -47,8 +47,8 @@ def detect_defect(img_path):
     mask2 = cv2.inRange(hsv, lower_red2, upper_red2)
     mask_red = cv2.bitwise_or(mask1, mask2)
         )
-    mask_smooth = cv2.GaussianBlur(mask_red, (7, 7), 0)
-    red_area = cv2.bitwise_and(img, img, mask=mask_smooth)
+    
+    red_area = cv2.bitwise_and(img, img, mask_red)
     gray = cv2.cvtColor(red_area, cv2.COLOR_BGR2GRAY)
     blurred = cv2.GaussianBlur(gray, (5, 5), 0)
     edges = cv2.Canny(blurred, 50, 150)
